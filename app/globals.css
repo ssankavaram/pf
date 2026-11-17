@@ -264,7 +264,7 @@ a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
 
 /* Outer card is moved in 3D by JS; the inner .work-tilt holds the image and leans toward the mouse when centred */
 .work-card {
-  position: absolute; left: 50%; top: 50%; height: var(--card-h); width: auto;
+  position: absolute; left: 0; top: 0; height: var(--card-h); width: auto; transform-origin: 0 0;
   transform-style: preserve-3d; will-change: transform, opacity; visibility: hidden;
 }
 .work-tilt {
@@ -275,7 +275,6 @@ a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
 .work-card.is-active .work-tilt { transform: rotateX(var(--ty, 0deg)) rotateY(var(--tx, 0deg)); }
 .work-tilt img, .work-tilt video { display: block; width: 100%; height: 100%; object-fit: cover; }
 .work-card { cursor: pointer; }
-.work-filters { position: absolute; width: 0; height: 0; pointer-events: none; }
 /* Hand-drawn loop around the centred project */
 .work-sketch { position: absolute; z-index: 150; left: 50%; top: 50%; pointer-events: none; opacity: 0; }
 .work-info { position: absolute; z-index: 200; top: clamp(80px, 11svh, 104px); left: var(--gutter); width: min(455px, 32vw); }
