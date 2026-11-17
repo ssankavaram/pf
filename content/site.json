@@ -12,10 +12,11 @@
   ],
   "cta": "Let’s talk",
   "drift": { "line1": "Bits and pieces", "line2": "from along the way" },
-  "about": { "label": "About me", "line": "A few things that make me, me" },
+  "tagline": "I specialize in solving problems and adding delight to regulated spaces.",
+  "about": { "title": "About me." },
   "collab": {
-    "quote": "The details are not the details. They make the design.",
-    "by": "Charles Eames",
+    "heading": "Let’s work together",
+    "cta": "Contact me",
     "you": "YOU",
     "cursors": ["Product", "Engineering", "Research", "Content", "Stakeholder"]
   },

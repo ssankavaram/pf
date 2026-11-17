@@ -16,13 +16,11 @@ const SPEED = 1.2; // playback speed of the whole bounce
 const ICONS = Array.from({ length: 12 }, (_, i) => `/about/${String(i + 1).padStart(2, "0")}.png`);
 
 type Props = {
-  label: string;
-  line: string;
+  title: string;
   bio: string;
-  resume?: { label: string; href: string };
 };
 
-export default function About({ label, line, bio, resume }: Props) {
+export default function About({ title, bio }: Props) {
   const root = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -78,24 +76,7 @@ export default function About({ label, line, bio, resume }: Props) {
   return (
     <section ref={root} id="about" className="about">
       <div className="about-panel">
-        <div className="about-bar">
-          <div>
-            <p className="about-btn about-btn-fill">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={ICONS[0]} alt="" />
-              <span>{label}</span>
-            </p>
-          </div>
-          <div className="about-line">{line}</div>
-          <div>
-            {resume && (
-              <a href={resume.href} target="_blank" rel="noreferrer" className="about-btn about-btn-line">
-                {resume.label} ↗
-              </a>
-            )}
-          </div>
-        </div>
-
+        <h2 className="about-title">{title}</h2>
         <div className="about-body">
           <div className="about-grid">
             {ICONS.map((src) => (

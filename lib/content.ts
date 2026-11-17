@@ -13,6 +13,7 @@ export type Section = {
 export type Project = {
   slug: string;
   short?: string;
+  coverFit?: "cover" | "contain"; // "contain" shows the whole cover on a grey card (e.g. a phone screen)
   title: string;
   meta: string;
   cover: string;

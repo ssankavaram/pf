@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { Bulb, Flower, Sprig, Yarn } from "./Doodles";
 
 export type HeroItem = {
   slug: string;
@@ -12,14 +11,19 @@ export type HeroItem = {
   client: string;   // shown right, muted
   cover: string;
   isVideo: boolean;
+  fit: "cover" | "contain";
 };
 
 const SCRUB = 0.6; // smoothing, in seconds
 
-// --d staggers each doodle's pop-in on load.
-const d = (n: number) => ({ "--d": `${0.25 + n * 0.12}s` }) as React.CSSProperties;
+type Props = {
+  name: string;
+  tagline: string;
+  currently: { text: string; linkLabel: string; href: string };
+  items: HeroItem[];
+};
 
-export default function Hero({ items }: { items: HeroItem[] }) {
+export default function Hero({ name, tagline, currently, items }: Props) {
   const root = useRef<HTMLElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const track = useRef<HTMLDivElement>(null);
@@ -50,18 +54,21 @@ export default function Hero({ items }: { items: HeroItem[] }) {
 
   return (
     <section ref={root} id="top" className="hs">
-      <h1 className="hs-title">
-        I <span className="doodle inline" style={d(0)}><Flower /></span> transform confusion{" "}
-        <span className="doodle inline" style={d(1)}><Yarn /></span> into{" "}
-        <span className="doodle inline" style={d(2)}><Sprig /></span> clarity{" "}
-        <span className="doodle inline" style={d(3)}><Bulb /></span>
-      </h1>
+      <header className="hs-head">
+        <h1 className="hs-title">
+          <span className="hs-name">{name}.</span> <span className="hs-tagline">{tagline}</span>
+        </h1>
+        <p className="hs-currently">
+          {currently.text}{" "}
+          <a href={currently.href} target="_blank" rel="noreferrer" className="ulink">{currently.linkLabel}</a>
+        </p>
+      </header>
 
       <div ref={viewport} id="projects" className="hs-viewport">
         <div ref={track} className="hs-track">
           {items.map((p) => (
             <Link key={p.slug} href={`/${p.slug}`} className="hs-card">
-              <div className="hs-media">
+              <div className={`hs-media fit-${p.fit}`}>
                 {p.isVideo ? (
                   <video src={`${p.cover}#t=0.001`} autoPlay muted loop playsInline preload="metadata" />
                 ) : (

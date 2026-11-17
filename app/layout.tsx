@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Instrument_Serif } from "next/font/google";
+import { Instrument_Serif, La_Belle_Aurore } from "next/font/google";
 import { site, asset } from "@/lib/content";
 import "./globals.css";
 
@@ -11,6 +11,13 @@ const display = Instrument_Serif({
   variable: "--font-display",
 });
 
+// Handwritten script for the footer wordmark.
+const script = La_Belle_Aurore({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-script",
+});
+
 export const metadata: Metadata = {
   title: site.title,
   description: site.bio,
@@ -19,7 +26,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={display.variable}>
+    <html lang="en" className={`${display.variable} ${script.variable}`}>
       <body>{children}</body>
     </html>
   );

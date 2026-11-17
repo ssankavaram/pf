@@ -51,13 +51,13 @@ function Pointer({ color: { bg: color, fg }, label }: { color: { bg: string; fg:
 }
 
 export default function Collab({
-  quote,
-  by,
+  heading,
+  cta,
   you,
   names,
 }: {
-  quote: string;
-  by: string;
+  heading: string;
+  cta?: { label: string; href: string };
   you: string;
   names: string[];
 }) {
@@ -175,10 +175,12 @@ export default function Collab({
 
   return (
     <section ref={root} id="collab" className={`collab${finePointer ? " collab-live" : ""}`}>
-      <blockquote className="collab-quote">
-        <p>“{quote}”</p>
-        <footer className="small">{by}</footer>
-      </blockquote>
+      <div className="collab-quote">
+        <h2>{heading}</h2>
+        {cta && (
+          <a href={cta.href} className="collab-cta">{cta.label}</a>
+        )}
+      </div>
 
       {names.map((name, i) => (
         <div

@@ -1,4 +1,3 @@
-import Nav from "@/components/Nav";
 import Hero, { type HeroItem } from "@/components/Hero";
 import About from "@/components/About";
 import Collab from "@/components/Collab";
@@ -16,25 +15,25 @@ export default function Home() {
       client: p.meta.split(" · ")[1] ?? "",
       cover,
       isVideo: isVideo(cover),
+      fit: p.coverFit ?? "cover",
     };
   });
+  const email = site.nav.find((i) => i.href.startsWith("mailto:"));
 
   return (
     <>
-      <Nav name={site.name} items={site.nav} cta={site.cta} />
-
       {/* Everything above the footer slides up to reveal it */}
       <main className="page">
-        <Hero items={heroItems} />
+        <Hero name={site.name} tagline={site.tagline} currently={site.currently} items={heroItems} />
 
-        <About
-          label={site.about.label}
-          line={site.about.line}
-          bio={site.bio}
-          resume={site.nav.find((i) => i.label.toLowerCase() === "resume")}
+        <About title={site.about.title} bio={site.bio} />
+
+        <Collab
+          heading={site.collab.heading}
+          cta={email && { label: site.collab.cta, href: email.href }}
+          you={site.collab.you}
+          names={site.collab.cursors}
         />
-
-        <Collab quote={site.collab.quote} by={site.collab.by} you={site.collab.you} names={site.collab.cursors} />
       </main>
 
       <Footer name={site.name} currently={site.currently} nav={site.nav} />

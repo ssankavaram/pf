@@ -5,11 +5,12 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 // Page sections in order (element ids). The hero's sideways project row is never snapped mid-way.
+// `dark` flips the dots to light colours while that section is showing.
 const SECTIONS = [
-  { id: "top", label: "Work" },
-  { id: "about", label: "About" },
-  { id: "collab", label: "Collaboration" },
-  { id: "contact", label: "Contact" },
+  { id: "top", label: "Work", dark: false },
+  { id: "about", label: "About", dark: true },
+  { id: "collab", label: "Contact", dark: false },
+  { id: "contact", label: "Footer", dark: true },
 ];
 
 /* ---- Tuning knobs ------------------------------------------------------- */
@@ -106,7 +107,7 @@ export default function SectionDots() {
   };
 
   return (
-    <nav className="dots" aria-label="Page sections">
+    <nav className={`dots${SECTIONS[active]?.dark ? " on-dark" : ""}`} aria-label="Page sections">
       {SECTIONS.map((s, i) => (
         <button
           key={s.id}
