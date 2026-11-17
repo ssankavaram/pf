@@ -45,10 +45,17 @@
   --r-card: 14px;
   --radius: var(--r-card);
   --max: 884px;
+
+  /* Motion: same curves and timings as lib/motion.ts (GSAP "expo.out", "power3.inOut", "back.out") */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 0.25s;
+  --dur-base: 0.5s;
+  --dur-slow: 0.9s;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
 body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
 a { color: inherit; text-decoration: none; }
 ul, ol { list-style: none; }
@@ -59,7 +66,7 @@ ul, ol { list-style: none; }
 .body { font-size: 16px; line-height: 1.6; }
 
 /* Left-to-right underline */
-.ulink { background: linear-gradient(currentColor, currentColor) no-repeat left bottom / 0% 1px; transition: background-size 0.3s ease; padding-bottom: 1px; }
+.ulink { background: linear-gradient(currentColor, currentColor) no-repeat left bottom / 0% 1px; transition: background-size var(--dur-base) var(--ease-out); padding-bottom: 1px; }
 a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
 
 /* Shared pill label (About bar, footer columns) */
@@ -141,28 +148,6 @@ a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
 @keyframes doodle-wiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-14deg) scale(1.08); } 75% { transform: rotate(12deg) scale(1.08); } }
 @keyframes doodle-spin { to { transform: rotate(360deg); } }
 
-/* Section dots: sit in the right gutter. Active one stretches into a pill. */
-.dots { position: fixed; z-index: 90; right: calc(var(--gutter) / 2 - 22px); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; }
-/* Visible dot is 12px; transparent padding makes the click area 44px wide (background stays inside the content box) */
-.dot {
-  position: relative; display: block; box-sizing: content-box; width: 12px; height: 12px; padding: 5px 16px; border: 0; border-radius: 999px;
-  background-color: rgba(36, 26, 22, 0.5); background-clip: content-box; cursor: pointer; /* 3.2:1, passes for UI */
-  transition: height 0.25s cubic-bezier(0.34, 1.4, 0.64, 1), background-color 0.2s;
-}
-.dot:hover { background-color: rgba(36, 26, 22, 0.7); }
-.dot.on { height: 36px; background-color: rgba(36, 26, 22, 0.88); }
-.dot:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; }
-.dot-label {
-  position: absolute; right: 100%; top: 50%; transform: translate(6px, -50%); opacity: 0; pointer-events: none;
-  padding: 4px 10px; border-radius: 999px; background: var(--ink); color: var(--cream); font-size: 12px; white-space: nowrap;
-  transition: opacity 0.2s, transform 0.2s;
-}
-.dot:hover .dot-label, .dot:focus-visible .dot-label { opacity: 1; transform: translate(0, -50%); }
-/* Over the dark sections */
-.dots.on-dark .dot { background-color: rgba(245, 245, 245, 0.45); }
-.dots.on-dark .dot:hover { background-color: rgba(245, 245, 245, 0.65); }
-.dots.on-dark .dot.on { background-color: rgba(245, 245, 245, 0.9); }
-.dots.on-dark .dot-label { background: #f5f5f5; color: var(--ink); }
 
 /* About me: flickable icon grid (adapted from Made With GSAP free effect 001) */
 /* About page: text left, flickable grid right */
@@ -218,9 +203,9 @@ a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
 .sticker {
   position: absolute; width: clamp(48px, 7vw, 100px); aspect-ratio: 1; transform: rotate(var(--r));
   filter: drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff) drop-shadow(0 6px 10px rgba(36, 26, 22, 0.25));
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform var(--dur-base) var(--ease-spring);
 }
-.sticker svg { display: block; width: 100%; height: 100%; animation: doodle-float 5s ease-in-out infinite alternate; }
+.sticker svg { display: block; width: 100%; height: 100%; animation: doodle-float 5s var(--ease-in-out) infinite alternate; }
 .sticker:hover { transform: rotate(0deg) scale(1.15); }
 .s1 { left: 2.7%; top: 45%; --r: -12deg; }
 .s2 { left: 21.3%; top: 25%; --r: 8deg; }
@@ -231,7 +216,6 @@ a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
 @media (max-width: 809px) {
   .nav { padding-left: 18px; }
   .nav .menu { order: 3; }
-  .dots { display: none; } /* too small to tap; touch users just scroll */
   .about-bar { display: flex; justify-content: space-between; padding: 14px; }
   .about-line { display: none; }
   .about-grid { gap: 2vw; }
@@ -254,21 +238,21 @@ a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
 .topnav-link {
   position: relative; display: inline-flex; align-items: center; gap: 4px; min-height: 44px;
   font: inherit; font-size: 16px; color: var(--muted); background: none; border: 0; padding: 0; cursor: pointer;
-  transition: color 0.2s;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 .topnav-link:hover, .topnav-link.on, .topnav-more .topnav-link { color: var(--ink); }
 .topnav-link.on::after { content: ""; position: absolute; left: 50%; bottom: 6px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--ink); }
-.topnav-link svg { transition: transform 0.2s ease-out; }
+.topnav-link svg { transition: transform var(--dur-base) var(--ease-out); }
 .topnav-link svg.flip { transform: rotate(180deg); }
 .topnav-more { position: relative; }
 .topnav-menu {
   position: absolute; top: calc(100% + 4px); right: -12px; min-width: 168px; padding: 6px;
   background: #fff; border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: 0 12px 32px rgba(36, 26, 22, 0.1);
-  animation: menu-in 0.18s ease-out both;
+  animation: menu-in var(--dur-base) var(--ease-out) both; transform-origin: top right;
 }
-.topnav-menu a { display: block; padding: 10px 12px; border-radius: 8px; font-size: 14px; color: var(--ink); }
+.topnav-menu a { display: block; padding: 10px 12px; border-radius: 8px; font-size: 14px; color: var(--ink); transition: background var(--dur-fast) var(--ease-out); }
 .topnav-menu a:hover { background: var(--paper-2); }
-@keyframes menu-in { from { opacity: 0; transform: translateY(-4px); } }
+@keyframes menu-in { from { opacity: 0; transform: translateY(-6px) scale(0.98); } }
 
 /* ================= Home: intro → project gallery ================= */
 .work { --card-h: min(48svh, 440px); position: relative; height: 100svh; overflow: hidden; background: var(--bg); perspective: 1600px; perspective-origin: 50% 45%; }
@@ -286,7 +270,7 @@ a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
 .work-tilt {
   width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: var(--card);
   box-shadow: 0 2px 6px rgba(36, 26, 22, 0.06), 0 28px 60px -18px rgba(36, 26, 22, 0.3);
-  transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition: transform var(--dur-slow) var(--ease-out);
 }
 .work-card.is-active .work-tilt { transform: rotateX(var(--ty, 0deg)) rotateY(var(--tx, 0deg)); }
 .work-tilt img, .work-tilt video { display: block; width: 100%; height: 100%; object-fit: cover; }
@@ -294,29 +278,37 @@ a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
 .work-sketch { position: absolute; z-index: 150; left: 50%; top: 50%; pointer-events: none; opacity: 0; }
 .work-info { position: absolute; z-index: 200; top: clamp(80px, 11svh, 104px); left: var(--gutter); width: min(455px, 32vw); }
 .work-project-title { display: block; font-family: var(--heading); font-size: clamp(22px, 1.95vw, 28px); line-height: 1.12; letter-spacing: -0.01em; color: var(--ink); }
-.work-tags {
+/* Under the centred card: its tags, then one small dot per project */
+.work-below {
   position: absolute; z-index: 200; left: 50%; top: calc(48% + var(--card-h) / 2 + 32px); transform: translateX(-50%);
-  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; width: min(340px, 90vw);
+  display: flex; flex-direction: column; align-items: center; gap: 20px; width: min(360px, 90vw);
+  opacity: 0; transition: opacity var(--dur-base) var(--ease-out);
 }
+.work-tags { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .work-tags li { padding: 2px 12px; border-radius: 8px; background: #e4e4e4; font-size: 14px; line-height: 1.6; color: var(--ink); white-space: nowrap; }
-.work-fade { animation: work-fade 0.3s ease-out both; }
-.work-tags.work-fade { animation-name: work-fade-tags; }
-@keyframes work-fade { from { opacity: 0; transform: translateY(8px); } }
-@keyframes work-fade-tags { from { opacity: 0; transform: translate(-50%, 8px); } }
+.work-dots { display: flex; gap: 2px; }
+/* 6px dot, 24px click area */
+.work-dot { width: 24px; height: 24px; padding: 0; border: 0; background: none; cursor: pointer; display: grid; place-items: center; }
+.work-dot::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%; background: rgba(36, 26, 22, 0.5); /* 3.2:1 */
+  transition: transform var(--dur-base) var(--ease-spring), background var(--dur-fast) var(--ease-out);
+}
+.work-dot:hover::before { background: rgba(36, 26, 22, 0.75); }
+.work-dot.on::before { background: var(--ink); transform: scale(1.35); }
+.work-dot:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; border-radius: 50%; }
 
 /* Reduced motion: everything stacked, nothing pinned */
 .work-static { height: auto; overflow: visible; }
 .work-static .work-intro { position: relative; inset: auto; min-height: 100svh; }
 .work-static-item { display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 48px var(--gutter); }
 .work-static .work-card { position: relative; left: auto; top: auto; visibility: visible; max-width: 100%; }
-.work-static .work-tags { position: static; transform: none; }
 
 /* IconStack (tool logos) */
 .stack { position: relative; display: flex; flex-direction: column; align-items: center; }
 .stack-row { display: flex; flex-direction: row; }
 .stack-circle { width: 100%; height: 100%; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: visible; will-change: transform; }
 .stack-circle img { object-fit: contain; pointer-events: none; user-select: none; border-radius: 4px; }
-.stack-tag { position: absolute; top: 0; left: 0; z-index: 10; opacity: 0; transition: opacity 0.16s ease-out; pointer-events: none; white-space: nowrap; will-change: transform, opacity; }
+.stack-tag { position: absolute; top: 0; left: 0; z-index: 10; opacity: 0; transition: opacity var(--dur-fast) var(--ease-out); pointer-events: none; white-space: nowrap; will-change: transform, opacity; }
 .stack-tag span { display: inline-block; font-family: var(--script); font-size: 22px; line-height: 1; color: var(--ink); user-select: none; }
 
 @media (max-width: 809px) {
@@ -341,7 +333,7 @@ a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
 .case-body { display: grid; grid-template-columns: 180px 1fr; gap: 48px; }
 .progress { position: sticky; top: 56px; align-self: start; font-size: 12px; }
 .progress li { margin-bottom: 10px; }
-.progress a { display: block; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 10px; border-left: 1.5px solid transparent; transition: color .2s, border-color .2s; }
+.progress a { display: block; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 10px; border-left: 1.5px solid transparent; transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out); }
 .progress li.on a { color: var(--ink); border-color: var(--orange); }
 .sections { min-width: 0; }
 .section { margin-bottom: 72px; scroll-margin-top: 40px; }

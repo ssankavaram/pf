@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import gsap from "gsap";
+import { DUR, EASE } from "@/lib/motion";
 
 /* ---- Tuning knobs ------------------------------------------------------- */
 const LOOPS = 1.85;   // how many times the pen goes around (a little under 2 = an open, hand-drawn end)
@@ -10,7 +12,6 @@ const FPS = 10;       // "boil" rate: how often the line redraws itself
 const PAD_X = 0.18;   // space between the card and the loop, as a fraction of card size
 const PAD_Y = 0.1;
 const STROKE = 2.5;
-const DRAW_MS = 700;  // time to draw the loop in
 /* ------------------------------------------------------------------------ */
 
 type Pt = [number, number];
@@ -61,13 +62,9 @@ export default function Scribble({ w, h, drawKey, color = "var(--orange)" }: { w
     setD(scribble(W, H, start.current));
     if (reduced) return;
 
-    pathRef.current?.animate([{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], {
-      duration: DRAW_MS,
-      easing: "cubic-bezier(0.2, 0.7, 0.2, 1)",
-      fill: "both",
-    });
+    const draw = gsap.fromTo(pathRef.current, { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: DUR.slow, ease: EASE.out });
     const id = setInterval(() => setD(scribble(W, H, start.current)), 1000 / FPS);
-    return () => clearInterval(id);
+    return () => { clearInterval(id); draw.kill(); };
   }, [W, H, drawKey]);
 
   return (

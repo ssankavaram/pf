@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { InertiaPlugin } from "gsap/InertiaPlugin";
+import { EASE } from "@/lib/motion";
 
 // Adapted from Made With GSAP free effect 001: icons get flicked in the direction
 // your mouse is moving, tilt, then spring back into place.
@@ -56,7 +57,7 @@ export default function About({ title, bio }: Props) {
       tl.fromTo(
         img,
         { rotate: 0 },
-        { duration: 0.4, rotate: (Math.random() - 0.5) * TILT, yoyo: true, repeat: 1, ease: "power1.inOut" },
+        { duration: 0.4, rotate: (Math.random() - 0.5) * TILT, yoyo: true, repeat: 1, ease: EASE.inOut },
         "<",
       );
     };

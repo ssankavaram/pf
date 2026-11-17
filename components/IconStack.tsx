@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import gsap from "gsap";
+import { DUR, EASE } from "@/lib/motion";
 
 /**
  * IconStack — row of overlapping tool circles with smooth proximity repel.
@@ -192,10 +194,7 @@ export default function IconStack({
           if (name !== activeName.current) {
             activeName.current = name;
             txt.textContent = name;
-            txt.animate(
-              [{ opacity: 0, transform: "translateY(5px)" }, { opacity: 1, transform: "translateY(0px)" }],
-              { duration: 160, easing: "ease-out" },
-            );
+            gsap.fromTo(txt, { opacity: 0, y: 5 }, { opacity: 1, y: 0, duration: DUR.fast, ease: EASE.out, overwrite: true });
           }
         } else {
           tag.style.opacity = "0";

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Instrument_Serif, La_Belle_Aurore } from "next/font/google";
 import { site, asset } from "@/lib/content";
+import SmoothScroll from "@/components/SmoothScroll";
+import "lenis/dist/lenis.css";
 import "./globals.css";
 
 // Display serif for big headlines (hero, footer wordmark).
@@ -27,7 +29,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${display.variable} ${script.variable}`}>
-      <body>{children}</body>
+      <body>
+        <SmoothScroll />
+        {children}
+      </body>
     </html>
   );
 }
