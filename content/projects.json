@@ -1,0 +1,190 @@
+[
+  {
+    "slug": "investing-education",
+    "title": "Lifting engagement by 47% in testing with AI-powered investing education at a leading national bank",
+    "meta": "Case study · Enterprise · Lead designer · In development",
+    "cover": "https://framerusercontent.com/assets/LhDXJY3yv4RiUi6AQ5qH7FvnD0.mov",
+    "intro": ["I led the end-to-end design of LLM-powered insights that bring bite-sized, contextual education to advised and self-directed investors."],
+    "hero": "https://framerusercontent.com/assets/LhDXJY3yv4RiUi6AQ5qH7FvnD0.mov",
+    "sections": [
+      {
+        "heading": "Education was table stakes, and we were missing the mark with dense articles",
+        "body": ["CX research showed clients expected education built into the platform, not bolted on. What we had was an article farm: long, dense pieces buried away from the moments clients actually had questions."],
+        "media": ["https://framerusercontent.com/assets/JhJQqwNQSdsIxIpBgm1Qq3HK8Y.mp4"]
+      },
+      {
+        "heading": "One voice across every touchpoint, human or AI",
+        "body": ["Clients learn across experiences owned by many teams. I partnered with those teams to align on tone, terminology, and content, so AI-generated insights and editorial content feel like the same voice wherever clients find them."]
+      },
+      {
+        "heading": "Designing for the moments that drive questions",
+        "body": [
+          "Mapping clients on a matrix, from novice to expert and self-directed to advised, surfaced the distinct needs of each user group.",
+          "Data showed most clients have advised accounts, and this same group showed the strongest demand for education. The priority was making sure AI supported their advisor relationship, not competed with it."
+        ],
+        "media": ["https://framerusercontent.com/images/oN1LsAtNXpyUirmdPnWh13Lkw.png"]
+      },
+      {
+        "heading": "AI that shows up when the question does",
+        "body": [
+          "Instead of sending clients off to find answers, LLM-powered insights surface right where questions come up, like next to a big drop on a stock chart.",
+          "Each insight is specific to the client and supports follow-up questions, going deeper without becoming a generic chatbot."
+        ],
+        "media": ["https://framerusercontent.com/assets/ULPdzbCtSZNyUudiYhmuNKZizo.mov"]
+      },
+      {
+        "heading": "Designed to explain, not advise",
+        "body": [
+          "In a regulated space, AI-generated advice is a risk concern. To foster innovation while working with constraints, I set a grounding principle that insights explain, never predict.",
+          "I built a repository of risk-approved topics and piloted a set that surface when their triggers are spotted, like a sharp price drop. Ask “Will it bounce back?” and users learn what drives a recovery, not a forecast."
+        ]
+      },
+      {
+        "heading": "Human in the loop",
+        "body": [
+          "Most clients are advised, so the insights needed to be transferable to live conversations with advisors.",
+          "Insight cards for advised clients shift to show the bigger picture, and any insight can be saved with one tap to bring up in their next meeting. AI starts the conversation. The advisor finishes it."
+        ],
+        "media": ["https://framerusercontent.com/images/z5FuySeYSoJQeod2mSu5UItyhSw.png"]
+      },
+      {
+        "heading": "Decoding jargon in place",
+        "body": ["Short, unobtrusive definitions sit under common investing jargon, right where clients see it. New investors get a lower barrier to entry, while experts can skim right past."],
+        "media": ["https://framerusercontent.com/assets/LDlPVhjvRyfFnj0sTNG5PXAXE.mp4"]
+      },
+      {
+        "heading": "Bite-sized answers where people already look",
+        "body": ["Search is where curiosity naturally leads, so it became the home for education. In partnership with marketing and risk, long articles were condensed into bite-sized reads and videos, creating fresh content without relying on outside vendors."],
+        "media": ["https://framerusercontent.com/assets/e5kL61iydSf6yetLBBET7TqU9c.mov"]
+      },
+      {
+        "heading": "From concept to funded workstream",
+        "body": ["Usability tests in Optimal Workshop showed a 47% increase in engagement with educational content. Product bought in, and the concept became a funded workstream, with a full LLM integration scoped for a future release."]
+      },
+      {
+        "heading": "Meet clients where the questions are",
+        "body": ["The most effective moments didn't feel like lessons, just answers showing up at the right time. Next steps include validating the 47% with live data and seeing how advised clients use insights ahead of advisor conversations."]
+      }
+    ]
+  },
+  {
+    "slug": "usbank",
+    "title": "A collection of my public facing work at U.S. Bank",
+    "meta": "Shipped · Wealth management · Business banking · Brand refresh",
+    "cover": "https://framerusercontent.com/assets/IUjEwEL3atx8K71RiDPPnQEJtCY.png",
+    "intro": ["For additional context on the design process, feel free to get in touch."],
+    "hero": "https://framerusercontent.com/images/FM64KdBvBlirLwJsrvRbUmTio.svg",
+    "sections": [
+      {
+        "heading": "Brand refresh",
+        "body": ["Shaped U.S. Bank’s new brand identity across digital experiences by defining typography treatments, emphasis heading styles, and color applications."],
+        "media": ["https://framerusercontent.com/images/RMrYO4Gv6AO9bAV9FSrsjP6f2eA.png"]
+      },
+      {
+        "heading": "Self-directed investing",
+        "body": ["Designed core experiences for U.S. Bank's new investment platform, including the order cancellation flow, chart loading animations, and educational touchpoints."],
+        "media": ["https://framerusercontent.com/assets/f9Lpow8WgkKxjb7ogtea4AymGiQ.mp4"]
+      },
+      {
+        "heading": "Small Business Survey",
+        "body": ["Shipped the dotcom landing page supporting the annual survey, creating an engaging entry point that drove an 80% year-over-year increase in PDF clicks."],
+        "link": { "label": "Live site", "href": "https://www.usbank.com/business-banking/business-resource-center/small-business-survey.html" },
+        "media": ["https://res.cloudinary.com/idgfrsd2/video/upload/v1783476575/realsbo_rkgomn.mp4"]
+      }
+    ]
+  },
+  {
+    "slug": "application-hub",
+    "title": "Decreasing banker help center calls on small business applications by 18%",
+    "meta": "Case study · Figma MCP · Enterprise · Shipped",
+    "cover": "https://framerusercontent.com/assets/eo910F2ZI9lDQmzeaxxRfTGFb0.mp4",
+    "intro": [
+      "The Application Hub is where Business Bankers check client application statuses, usually at high friction moments. The existing IA and design fell short on scannability and didn't connect what bankers saw to what action to take next.",
+      "As I conducted user interviews, I uncovered peripheral user archetypes I hadn't accounted for, like Product owners and IT support who use the hub too. To make sure their needs were addressed, I built out archetypes, then used a prioritization matrix to weigh their needs, designing a page that best supported the core use case without negatively impacting the peripheral ones."
+    ],
+    "hero": "https://res.cloudinary.com/idgfrsd2/video/upload/v1791143929/wiphub_wsatgh.mp4",
+    "sections": [
+      {
+        "heading": "Current hub gaps force bankers into long banker help line wait times, risking funded accounts",
+        "body": ["The current hub doesn't give bankers full visibility into an application's status, so when they're on the phone with a client, they often have to call into the banker help center, where wait times run over 40 minutes. That gap adds friction for the client and puts funded accounts at risk."],
+        "media": ["https://framerusercontent.com/images/vo0gDIch68kDOZfv4Xts7uuc8.png"]
+      },
+      {
+        "heading": "Mapping out user archetypes & scoping with the development team",
+        "body": ["As I started conducting user interviews, I quickly realized the hub served far more use cases than expected, not just bankers, but product owners and IT support who rely on it for their own use cases. The design challenge became interviewing across all these archetypes to map their needs, while making sure banker needs stayed the top priority and their experience wasn't compromised."],
+        "media": ["https://framerusercontent.com/images/vxsP4RlgH4f6Dj90HIbusANbk.png"]
+      },
+      {
+        "heading": "Iterating from wireframes to design based on user feedback",
+        "body": ["I reorganized the hierarchy to make this a scannable experience for bankers, putting all statuses in a clear vertical line of sight with the most important action decisions at the top of the page. I also added an activity column so bankers, IT, and product all have visibility into the application, giving everyone the full picture."],
+        "media": [
+          "https://framerusercontent.com/images/919MJyIFvdjuOKLkkXAeP2FSk.png",
+          "https://framerusercontent.com/images/5FPXwX9pKQLZS8YWzt9DSkBLGBM.png"
+        ]
+      },
+      {
+        "heading": "Richer activity logs and status details reduce call center dependency",
+        "body": [
+          "To address bankers' core need, I designed an activity log that shows exactly what page a client left off on, giving bankers a fuller picture to make decisions and cutting down on banker help center calls.",
+          "I also built out a more robust status section so bankers can scan it and immediately know what action to take next."
+        ],
+        "media": ["https://framerusercontent.com/images/LdnmBEgL4fG8vVqO9LDIud2ZDXQ.png"]
+      },
+      {
+        "heading": "Keeping the banker ID for product owners' workflow",
+        "body": ["During interviews, one banker questioned why the Banker ID was still on the page, saying she didn't need it. But product owners flagged it as essential to their own workflow. Rather than remove it for bankers at the expense of POs, we kept the Banker ID in place, prioritizing peripheral needs where removing something added no real benefit to the core user."],
+        "media": ["https://framerusercontent.com/images/yLFJ0G0HNAM7mCzxvMd4SnBoQ.png"]
+      },
+      {
+        "heading": "Prepping my file for Figma MCP",
+        "body": ["I worked closely with the development team to pilot a Figma MCP to Git to VS Code workflow, speeding up production. I built a design markdown file from scratch, including component guidelines, and structured an optimal layout for the design file so MCP could read it efficiently."]
+      },
+      {
+        "heading": "Banker help center calls down 18%",
+        "body": [
+          "Since launch, call center calls from bankers have dropped 18%, as bankers can now check application status and next steps in the hub instead of waiting 40+ minutes on CAFE.",
+          "Usability testing confirmed bankers found the next action faster, and I'm continuing to track page analytics and call data to measure ongoing impact."
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "projectmorph",
+    "title": "Consolidating scattered government resource pages into one reliable hub",
+    "meta": "Redesign · Nonprofit · Framer · Claude code",
+    "cover": "https://framerusercontent.com/assets/3VMWh3xgQqJ1VExUqVQVfZwjOw.mov",
+    "intro": ["As head of design at Project Morph, a 501(c)(3), I redesigned our site to better communicate our mission and point people toward the right resources and assistance."],
+    "link": { "label": "Live site", "href": "https://www.projectmorph.org" },
+    "hero": "https://framerusercontent.com/assets/xna45I43t82UhsLIatukR6XRQ.mov",
+    "sections": [
+      {
+        "heading": "Concisely answering what we do and where to get help",
+        "body": [
+          "The first step was aligning with my team on the goals and priorities for the redesign. From past experience, we noticed people were coming to our site looking for resources and help, but we were mostly set up as a nonprofit focused on events.",
+          "We also noticed a major pain point: people were having to dig through government websites to find help, many of which had old, outdated, or hard-to-navigate information. So our top priority became building a resources section where everything people needed lived in one place, without having to sort through information online."
+        ]
+      },
+      {
+        "heading": "Crafting an approachable brand language",
+        "body": [
+          "I established a refreshed brand identity that better resonated with our audience.",
+          "By incorporating purple, a color commonly associated with domestic violence awareness, and a more approachable illustrated logo featuring a butterfly, we were able to align more closely with the cause."
+        ],
+        "media": ["https://res.cloudinary.com/idgfrsd2/video/upload/v1783031626/Frame_60_1_zacfn5.mp4"]
+      },
+      {
+        "heading": "Designing for an unexpected user group",
+        "body": [
+          "Millions of people search for domestic violence resources online every year, but that information is scattered across government sites and other platforms, many of them outdated or hard to navigate. Finding support in one place shouldn't be this hard.",
+          "To close that gap, I designed a centralized resources section with a custom code component, making it easier for people to find the exact help they need, faster."
+        ],
+        "media": ["https://res.cloudinary.com/idgfrsd2/video/upload/v1785033140/laptopResources_bjiick.mov"]
+      },
+      {
+        "heading": "Making it easier for users to reach us",
+        "body": ["I designed a Contact Us section connected to clear CTAs, making it easier for partners, donors, and community members to quickly connect with the organization."],
+        "media": ["https://res.cloudinary.com/idgfrsd2/image/upload/v1785033488/contactlaptop_mwnzge.png"]
+      }
+    ]
+  }
+]

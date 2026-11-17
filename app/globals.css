@@ -1,0 +1,87 @@
+/* Open Runde: drop the .woff2 files into /public/fonts (see README). Falls back to system UI until then. */
+@font-face { font-family: "Open Runde"; src: url("/fonts/OpenRunde-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Open Runde"; src: url("/fonts/OpenRunde-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Open Runde"; src: url("/fonts/OpenRunde-Semibold.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+
+:root {
+  --bg: #f7f7f7;
+  --fg: rgba(0, 0, 0, 0.75);
+  --muted: rgba(0, 0, 0, 0.5);
+  --surface: #ececec;
+  --radius: 16px;
+  --max: 884px;
+  --font: "Open Runde", ui-rounded, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-decoration: none; }
+ul, ol { list-style: none; }
+
+.wrap { max-width: calc(var(--max) + 48px); margin: 0 auto; padding: 56px 24px 120px; }
+.small { font-size: 14px; line-height: 1.6; letter-spacing: -0.02em; }
+.body { font-size: 16px; line-height: 1.6; letter-spacing: -0.02em; }
+
+/* Left-to-right underline (NavLink style) */
+.ulink { background: linear-gradient(currentColor, currentColor) no-repeat left bottom / 0% 1px; transition: background-size 0.3s ease; padding-bottom: 1px; }
+a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
+
+/* Header */
+.header { margin-bottom: 40px; }
+.header-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.name { font-size: 18px; font-weight: 400; line-height: 1.2; margin-bottom: 4px; }
+.bio { margin-top: 28px; max-width: 640px; }
+.tools { display: flex; gap: 8px; margin-top: 16px; }
+.tools img { width: 18px; height: 18px; object-fit: contain; }
+
+/* Menu */
+.menu { position: relative; }
+.menu-inline { display: flex; gap: 20px; font-size: 14px; }
+.menu-btn { display: none; width: 28px; height: 28px; background: none; border: 0; cursor: pointer; flex-direction: column; justify-content: center; gap: 5px; }
+.menu-btn span { display: block; width: 14px; height: 1.5px; background: var(--fg); margin: 0 auto; }
+.menu-sheet { position: absolute; right: 0; top: 36px; background: #fff; border-radius: 12px; padding: 8px; box-shadow: 0 8px 30px rgba(0,0,0,.08); min-width: 160px; z-index: 10; }
+.menu-sheet a { display: block; padding: 8px 12px; border-radius: 8px; font-size: 14px; }
+.menu-sheet a:hover { background: var(--bg); }
+
+/* Media */
+.media { background: var(--surface); border-radius: var(--radius); overflow: hidden; }
+.media img, .media video { display: block; width: 100%; height: auto; }
+
+/* Home grid */
+.grid { display: grid; grid-template-columns: 1fr; gap: 48px; }
+.card { display: block; }
+.card-media { aspect-ratio: 16 / 10; margin-bottom: 14px; }
+.card-media img, .card-media video { width: 100%; height: 100%; object-fit: cover; transition: transform .5s ease; }
+.card:hover .card-media img, .card:hover .card-media video { transform: scale(1.015); }
+.card-title { font-weight: 500; letter-spacing: -0.02em; }
+.card .small { color: var(--muted); }
+
+/* Case study */
+.back { display: inline-flex; gap: 6px; font-size: 14px; margin-bottom: 40px; }
+.case-head { max-width: 640px; margin-bottom: 40px; }
+.case-head h1 { font-size: 28px; font-weight: 500; line-height: 1.25; letter-spacing: -0.03em; margin-bottom: 10px; }
+.case-head .small { color: var(--muted); margin-bottom: 20px; }
+.case-head .body + .body { margin-top: 12px; }
+.live { display: inline-block; margin-top: 16px; font-size: 14px; }
+.hero { margin-bottom: 72px; }
+
+.case-body { display: grid; grid-template-columns: 180px 1fr; gap: 48px; }
+.progress { position: sticky; top: 56px; align-self: start; font-size: 12px; }
+.progress li { margin-bottom: 10px; }
+.progress a { display: block; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 10px; border-left: 1.5px solid transparent; transition: color .2s, border-color .2s; }
+.progress li.on a { color: var(--fg); border-color: var(--fg); }
+.sections { min-width: 0; }
+.section { margin-bottom: 72px; scroll-margin-top: 40px; }
+.section h3 { font-size: 18px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.35; margin-bottom: 12px; }
+.section .body + .body { margin-top: 12px; }
+.section .media { margin-top: 28px; }
+
+@media (max-width: 809px) {
+  .wrap { padding-top: 32px; }
+  .menu-inline { display: none; }
+  .menu-btn { display: flex; }
+  .case-body { grid-template-columns: 1fr; }
+  .progress { display: none; }
+  .case-head h1 { font-size: 24px; }
+}
