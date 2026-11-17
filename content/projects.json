@@ -1,6 +1,7 @@
 [
   {
     "slug": "investing-education",
+    "short": "Investing education",
     "title": "Lifting engagement by 47% in testing with AI-powered investing education at a leading national bank",
     "meta": "Case study · Enterprise · Lead designer · In development",
     "cover": "https://framerusercontent.com/assets/LhDXJY3yv4RiUi6AQ5qH7FvnD0.mov",
@@ -69,6 +70,7 @@
   },
   {
     "slug": "usbank",
+    "short": "U.S. Bank",
     "title": "A collection of my public facing work at U.S. Bank",
     "meta": "Shipped · Wealth management · Business banking · Brand refresh",
     "cover": "https://framerusercontent.com/assets/IUjEwEL3atx8K71RiDPPnQEJtCY.png",
@@ -95,6 +97,7 @@
   },
   {
     "slug": "application-hub",
+    "short": "Application hub",
     "title": "Decreasing banker help center calls on small business applications by 18%",
     "meta": "Case study · Figma MCP · Enterprise · Shipped",
     "cover": "https://framerusercontent.com/assets/eo910F2ZI9lDQmzeaxxRfTGFb0.mp4",
@@ -150,6 +153,7 @@
   },
   {
     "slug": "projectmorph",
+    "short": "Project Morph",
     "title": "Consolidating scattered government resource pages into one reliable hub",
     "meta": "Redesign · Nonprofit · Framer · Claude code",
     "cover": "https://framerusercontent.com/assets/3VMWh3xgQqJ1VExUqVQVfZwjOw.mov",

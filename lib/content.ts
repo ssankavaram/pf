@@ -12,6 +12,7 @@ export type Section = {
 
 export type Project = {
   slug: string;
+  short?: string;
   title: string;
   meta: string;
   cover: string;
