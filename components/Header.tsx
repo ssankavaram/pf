@@ -23,7 +23,7 @@ export default function Header() {
       <div className="tools">
         {site.tools.map((t) => (
           // eslint-disable-next-line @next/next/no-img-element
-          <img key={t} src={asset(t)} alt="" width={18} height={18} />
+          <img key={t.name} src={asset(t.src)} alt={t.name} width={18} height={18} />
         ))}
       </div>
     </header>

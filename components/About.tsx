@@ -75,19 +75,17 @@ export default function About({ title, bio }: Props) {
 
   return (
     <section ref={root} id="about" className="about">
-      <div className="about-panel">
-        <h2 className="about-title">{title}</h2>
-        <div className="about-body">
-          <div className="about-grid">
-            {ICONS.map((src) => (
-              <div key={src} className="about-icon">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={src} alt="" />
-              </div>
-            ))}
+      <div className="about-text">
+        <h1 className="about-title">{title}</h1>
+        <p className="about-bio">{bio}</p>
+      </div>
+      <div className="about-grid">
+        {ICONS.map((src) => (
+          <div key={src} className="about-icon">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={src} alt="" />
           </div>
-          <p className="about-bio">{bio}</p>
-        </div>
+        ))}
       </div>
     </section>
   );

@@ -1,32 +1,33 @@
-import Hero, { type HeroItem } from "@/components/Hero";
-import About from "@/components/About";
+import TopNav from "@/components/TopNav";
+import Hero, { type WorkItem } from "@/components/Hero";
 import Collab from "@/components/Collab";
 import Footer from "@/components/Footer";
 import SectionDots from "@/components/SectionDots";
-import { projects, site, asset, isVideo } from "@/lib/content";
+import { projects, site, asset, isVideo, moreLinks } from "@/lib/content";
 
 export default function Home() {
-  // Project cards for the hero row. meta looks like "Case study · Enterprise · Lead designer · ..."
-  const heroItems: HeroItem[] = projects.map((p) => {
+  const items: WorkItem[] = projects.map((p) => {
     const cover = asset(p.cover);
     return {
       slug: p.slug,
-      title: p.short ?? p.title,
-      client: p.meta.split(" · ")[1] ?? "",
+      title: p.title,
       cover,
       isVideo: isVideo(cover),
-      fit: p.coverFit ?? "cover",
+      aspect: p.coverAspect ?? 1.25,
+      // Explicit tags, else the labels from meta ("Case study · Enterprise · …")
+      tags: p.tags ?? p.meta.split(" · "),
     };
   });
+  const tools = site.tools.map((t) => ({ name: t.name, src: asset(t.src) }));
   const email = site.nav.find((i) => i.href.startsWith("mailto:"));
 
   return (
     <>
+      <TopNav name={site.name} more={moreLinks()} />
+
       {/* Everything above the footer slides up to reveal it */}
       <main className="page">
-        <Hero name={site.name} tagline={site.tagline} currently={site.currently} items={heroItems} />
-
-        <About title={site.about.title} bio={site.bio} />
+        <Hero name={site.name} tagline={site.tagline} currently={site.currently} tools={tools} items={items} />
 
         <Collab
           heading={site.collab.heading}

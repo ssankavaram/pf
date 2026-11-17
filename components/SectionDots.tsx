@@ -6,9 +6,9 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 // Page sections in order (element ids). The hero's sideways project row is never snapped mid-way.
 // `dark` flips the dots to light colours while that section is showing.
+// The first section is the pinned work gallery, which snaps between projects on its own.
 const SECTIONS = [
   { id: "top", label: "Work", dark: false },
-  { id: "about", label: "About", dark: true },
   { id: "collab", label: "Contact", dark: false },
   { id: "contact", label: "Footer", dark: true },
 ];
@@ -40,11 +40,12 @@ export default function SectionDots() {
 
     const measure = () => {
       const max = ScrollTrigger.maxScroll(window);
-      const about = topOf("about");
-      const hero = document.getElementById("top");
-      heroEnd.current = Math.max(0, about - (hero?.offsetHeight ?? window.innerHeight));
+      // The pinned first section ends where the second one starts, minus its own height.
+      const second = topOf(SECTIONS[1].id);
+      const first = document.getElementById(SECTIONS[0].id);
+      heroEnd.current = Math.max(0, second - (first?.offsetHeight ?? window.innerHeight));
       // The footer is sticky, so "its" position is simply the bottom of the page.
-      points.current = [0, about, topOf("collab"), max];
+      points.current = [0, ...SECTIONS.slice(1, -1).map((s) => topOf(s.id)), max];
     };
 
     const updateActive = (y: number) => {

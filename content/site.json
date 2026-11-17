@@ -5,7 +5,7 @@
   "bio": "I’m a product designer who turns complex, regulated systems into experiences that feel human. I ground my work in behavioral science and prototype in code.",
   "nav": [
     { "label": "Projects", "href": "/#projects" },
-    { "label": "About", "href": "/#about" },
+    { "label": "About", "href": "/about" },
     { "label": "Resume", "href": "TODO-resume-url" },
     { "label": "Email", "href": "mailto:TODO@example.com" },
     { "label": "Linkedin", "href": "https://www.linkedin.com/in/TODO" }
@@ -22,13 +22,13 @@
   },
   "favicon": "https://framerusercontent.com/images/ctPXlJ8aDbLQkYHUqPwAfMvafyQ.png",
   "tools": [
-    "https://framerusercontent.com/images/yATBTBvbtelA3YvOaDZkMUBaPc.png",
-    "https://framerusercontent.com/images/LhDnpI4Jq8y2pGr8Fbc6uvEKPQ.png",
-    "https://framerusercontent.com/images/IsCQ5fzGYh4F5QV95wUVeg1DIM.png",
-    "https://framerusercontent.com/images/C9R0xDZm3TuIqgb1CslTcDFCr0.webp",
-    "https://framerusercontent.com/images/3YI5ZMJHWykL7CJilFWl7N7Y.svg",
-    "https://framerusercontent.com/images/qOsQlMrmqG1NKS4Vfvvo7B3TBho.png",
-    "https://framerusercontent.com/images/GRsGYkUubzpEmgQ5DIKQvuWWb30.png",
-    "https://framerusercontent.com/images/4Eshnma3m16AU0QrpjRDpiCtKY.png"
+    { "name": "Figma", "src": "https://framerusercontent.com/images/yATBTBvbtelA3YvOaDZkMUBaPc.png" },
+    { "name": "Claude", "src": "https://framerusercontent.com/images/LhDnpI4Jq8y2pGr8Fbc6uvEKPQ.png" },
+    { "name": "Cursor", "src": "https://framerusercontent.com/images/IsCQ5fzGYh4F5QV95wUVeg1DIM.png" },
+    { "name": "Webflow", "src": "https://framerusercontent.com/images/C9R0xDZm3TuIqgb1CslTcDFCr0.webp" },
+    { "name": "Framer", "src": "https://framerusercontent.com/images/3YI5ZMJHWykL7CJilFWl7N7Y.svg" },
+    { "name": "Atlassian", "src": "https://framerusercontent.com/images/qOsQlMrmqG1NKS4Vfvvo7B3TBho.png" },
+    { "name": "UserTesting", "src": "https://framerusercontent.com/images/GRsGYkUubzpEmgQ5DIKQvuWWb30.png" },
+    { "name": "GitHub", "src": "https://framerusercontent.com/images/4Eshnma3m16AU0QrpjRDpiCtKY.png" }
   ]
 }

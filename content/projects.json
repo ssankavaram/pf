@@ -1,6 +1,8 @@
 [
   {
     "slug": "investing-education",
+    "coverAspect": 0.48,
+    "tags": ["Design engineering", "0 → 1", "Product design", "Claude code", "Figma"],
     "short": "Investing education",
     "coverFit": "contain",
     "title": "Lifting engagement by 47% in testing with AI-powered investing education at a leading national bank",
@@ -71,6 +73,7 @@
   },
   {
     "slug": "usbank",
+    "coverAspect": 1.375,
     "short": "U.S. Bank",
     "title": "A collection of my public facing work at U.S. Bank",
     "meta": "Shipped · Wealth management · Business banking · Brand refresh",
@@ -98,6 +101,7 @@
   },
   {
     "slug": "application-hub",
+    "coverAspect": 0.865,
     "short": "Application hub",
     "title": "Decreasing banker help center calls on small business applications by 18%",
     "meta": "Case study · Figma MCP · Enterprise · Shipped",
@@ -154,6 +158,7 @@
   },
   {
     "slug": "projectmorph",
+    "coverAspect": 1.256,
     "short": "Project Morph",
     "title": "Consolidating scattered government resource pages into one reliable hub",
     "meta": "Redesign · Nonprofit · Framer · Claude code",

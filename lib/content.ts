@@ -14,6 +14,8 @@ export type Project = {
   slug: string;
   short?: string;
   coverFit?: "cover" | "contain"; // "contain" shows the whole cover on a grey card (e.g. a phone screen)
+  coverAspect?: number; // cover width ÷ height, so gallery cards get the right shape before media loads
+  tags?: string[];      // pills under the project in the home gallery (falls back to meta)
   title: string;
   meta: string;
   cover: string;
@@ -27,6 +29,9 @@ export const projects = projectsData as Project[];
 export const site = siteData;
 
 export const getProject = (slug: string) => projects.find((p) => p.slug === slug);
+
+/** Outside links for the nav's "More" menu: everything in site.nav that isn't an on-site page. */
+export const moreLinks = () => site.nav.filter((i) => !i.href.startsWith("/"));
 
 const MEDIA_DIR = path.join(process.cwd(), "public", "media");
 
