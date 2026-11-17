@@ -20,6 +20,8 @@ export type WorkItem = {
 /* ---- Tuning knobs ------------------------------------------------------- */
 const SCROLL_PER_STEP = 0.9; // screen-heights of scrolling per project
 const TILT = { x: 8, y: 6 }; // max mouse tilt on the centred card, degrees
+const WARP = 46;             // how strongly side cards ripple (px of displacement); 0 turns it off
+const FLASH_MS = 1600;       // how long the sketch stays after clicking a project into focus (unless hovered)
 // Card poses, relative to the screen centre. x/y: × screen width/height, z: px toward (+) or away (−),
 // ry/rx: rotation in degrees. The section has CSS perspective, so z and rotation read as real depth.
 type Pose = { x: number; y: number; z: number; rx: number; ry: number };
@@ -65,8 +67,12 @@ export default function Hero({ name, tagline, currently, tools, items }: Props) 
   const info = useRef<HTMLDivElement>(null);
   const below = useRef<HTMLDivElement>(null);
   const trigger = useRef<ScrollTrigger | null>(null);
+  const warps = useRef<(SVGFEDisplacementMapElement | null)[]>([]);
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRef = useRef(-2);
   const [active, setActive] = useState(-1);
+  const [hovered, setHovered] = useState(-1); // card under the mouse
+  const [flash, setFlash] = useState(-1);     // card just clicked into focus
   const [size, setSize] = useState({ w: 0, h: 0 }); // active card's size, for the sketch
   const [reduced, setReduced] = useState(false);
   const n = items.length;
@@ -106,8 +112,14 @@ export default function Hero({ name, tagline, currently, tools, items }: Props) 
         card.style.opacity = String(op);
         card.style.zIndex = String(100 - Math.round(Math.abs(u - 1) * 10));
         card.style.visibility = op > 0.01 ? "visible" : "hidden";
-        card.style.pointerEvents = Math.abs(u - 1) < 0.3 ? "auto" : "none";
+        card.style.pointerEvents = op > 0.3 ? "auto" : "none"; // neighbours are clickable too
         card.classList.toggle("is-active", Math.abs(u - 1) < 0.15);
+
+        // Warp grows with distance from the centre; switched off entirely when centred (cheaper, crisp).
+        const w = WARP * travel(clamp(Math.abs(u - 1), 0, 1));
+        warps.current[j]?.setAttribute("scale", w.toFixed(1));
+        const tilt = card.firstElementChild as HTMLElement | null;
+        if (tilt) tilt.style.filter = w > 0.5 ? `url(#warp-${j})` : "none";
       });
 
       const a = p < 0.5 ? -1 : clamp(Math.round(p) - 1, 0, n - 1);
@@ -207,12 +219,28 @@ export default function Hero({ name, tagline, currently, tools, items }: Props) 
     return () => window.removeEventListener("resize", measure);
   }, [active]);
 
-  // Dot click: glide to the scroll position where that project sits in the centre.
-  const goTo = (k: number) => {
+  // Glide to the scroll position where project k sits in the centre.
+  const goTo = (k: number, onArrive?: () => void) => {
     const st = trigger.current;
     if (!st) return;
-    scrollToY(st.start + ((k + 1) / n) * (st.end - st.start));
+    scrollToY(st.start + ((k + 1) / n) * (st.end - st.start), onArrive);
   };
+
+  // Sketch shows briefly after a project is clicked into focus (stays while hovered).
+  const flashSketch = (k: number) => {
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+    setFlash(k);
+    flashTimer.current = setTimeout(() => setFlash(-1), FLASH_MS);
+  };
+  useEffect(() => () => { if (flashTimer.current) clearTimeout(flashTimer.current); }, []);
+
+  // Clicking a neighbour brings it into focus; clicking the centred card opens the case study.
+  const onCardClick = (k: number) => (e: React.MouseEvent) => {
+    if (k === active) { flashSketch(k); return; }
+    e.preventDefault();
+    goTo(k, () => flashSketch(k));
+  };
+  const sketchOn = active >= 0 && (hovered === active || flash === active);
 
   const introBlock = (
     <div ref={intro} className="work-intro">
@@ -249,6 +277,21 @@ export default function Hero({ name, tagline, currently, tools, items }: Props) 
 
   return (
     <section ref={root} id="top" className="work" aria-label="Selected work">
+      {/* One ripple filter per card; render() sets each one's strength */}
+      <svg className="work-filters" width="0" height="0" aria-hidden>
+        <defs>
+          {items.map((p, i) => (
+            <filter key={p.slug} id={`warp-${i}`} x="-10%" y="-10%" width="120%" height="120%" colorInterpolationFilters="sRGB">
+              <feTurbulence type="fractalNoise" baseFrequency="0.006 0.014" numOctaves={2} seed={i + 3} result="noise" />
+              <feDisplacementMap
+                ref={(el) => { warps.current[i] = el; }}
+                in="SourceGraphic" in2="noise" scale="0" xChannelSelector="R" yChannelSelector="G"
+              />
+            </filter>
+          ))}
+        </defs>
+      </svg>
+
       {introBlock}
 
       {items.map((p, i) => (
@@ -257,15 +300,18 @@ export default function Hero({ name, tagline, currently, tools, items }: Props) 
           href={`/${p.slug}`}
           className="work-card"
           style={{ aspectRatio: p.aspect }}
-          aria-label={p.title}
+          aria-label={i === active ? `Open ${p.title}` : `Show ${p.title}`}
           ref={(el) => { cards.current[i] = el; }}
+          onClick={onCardClick(i)}
+          onMouseEnter={() => setHovered(i)}
+          onMouseLeave={() => { setHovered(-1); setFlash(-1); }}
         >
           <Cover p={p} autoPlay />
         </Link>
       ))}
 
       <div ref={sketch} className="work-sketch" aria-hidden>
-        {current && size.w > 0 && <Scribble w={size.w} h={size.h} drawKey={current.slug} />}
+        {current && size.w > 0 && <Scribble key={current.slug} w={size.w} h={size.h} show={sketchOn} />}
       </div>
 
       <div ref={info} className="work-info" aria-live="polite">

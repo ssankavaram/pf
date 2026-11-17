@@ -8,7 +8,7 @@ import { DUR, EASE } from "@/lib/motion";
 const LOOPS = 1.85;   // how many times the pen goes around (a little under 2 = an open, hand-drawn end)
 const POINTS = 26;    // points per loop (fewer = wobblier)
 const JITTER = 0.035; // how much each point wanders (fraction of the radius)
-const FPS = 10;       // "boil" rate: how often the line redraws itself
+const FPS = 10;       // "boil" rate: how often the line redraws itself while showing
 const PAD_X = 0.18;   // space between the card and the loop, as a fraction of card size
 const PAD_Y = 0.1;
 const STROKE = 2.5;
@@ -48,8 +48,11 @@ function scribble(W: number, H: number, start: number) {
   return toPath(pts);
 }
 
-/** Hand-drawn loop around a w × h box. Draws itself in whenever `drawKey` changes. */
-export default function Scribble({ w, h, drawKey, color = "var(--orange)" }: { w: number; h: number; drawKey: string | number; color?: string }) {
+/**
+ * Hand-drawn loop around a w × h box. When `show` turns on it draws itself in and starts to "boil";
+ * when it turns off it erases itself from the start of the stroke.
+ */
+export default function Scribble({ w, h, show, color = "var(--orange)" }: { w: number; h: number; show: boolean; color?: string }) {
   const W = w * (1 + PAD_X * 2);
   const H = h * (1 + PAD_Y * 2);
   const start = useRef(-2.3);
@@ -57,15 +60,26 @@ export default function Scribble({ w, h, drawKey, color = "var(--orange)" }: { w
   const pathRef = useRef<SVGPathElement>(null);
 
   useEffect(() => {
+    const path = pathRef.current;
+    if (!path) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (!show) {
+      // Erase: the stroke retreats along its own path.
+      const erase = reduced
+        ? gsap.set(path, { strokeDashoffset: 1 })
+        : gsap.to(path, { strokeDashoffset: -1, duration: DUR.base, ease: EASE.inOut, overwrite: true });
+      return () => { erase.kill(); };
+    }
+
     start.current = -2.3 + (Math.random() - 0.5) * 0.8; // each new loop starts in a slightly different spot
     setD(scribble(W, H, start.current));
-    if (reduced) return;
+    if (reduced) { gsap.set(path, { strokeDashoffset: 0 }); return; }
 
-    const draw = gsap.fromTo(pathRef.current, { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: DUR.slow, ease: EASE.out });
+    const draw = gsap.fromTo(path, { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: DUR.slow, ease: EASE.out, overwrite: true });
     const id = setInterval(() => setD(scribble(W, H, start.current)), 1000 / FPS);
     return () => { clearInterval(id); draw.kill(); };
-  }, [W, H, drawKey]);
+  }, [show, W, H]);
 
   return (
     <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ overflow: "visible", display: "block" }} aria-hidden>
@@ -79,6 +93,7 @@ export default function Scribble({ w, h, drawKey, color = "var(--orange)" }: { w
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeDasharray="1 1"
+        strokeDashoffset={1}
       />
     </svg>
   );
