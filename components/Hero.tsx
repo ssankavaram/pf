@@ -48,7 +48,12 @@ export default function Hero({ name, tagline, currently, items }: Props) {
         },
       });
     });
-    // Reduced motion: no pinning; the row scrolls sideways natively instead (see CSS).
+    // Reduced motion: no pinning (the row scrolls sideways natively, see CSS), and covers don't autoplay.
+    mm.add("(prefers-reduced-motion: reduce)", () => {
+      const videos = Array.from(root.current?.querySelectorAll("video") ?? []);
+      videos.forEach((v) => { v.autoplay = false; v.pause(); });
+      return () => videos.forEach((v) => { v.autoplay = true; v.play().catch(() => {}); });
+    });
     return () => mm.revert();
   }, []);
 
