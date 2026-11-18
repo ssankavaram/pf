@@ -23,7 +23,7 @@ export const SCRUB = 0.6;    // how far scroll-linked animation trails the scrol
 let lenis: Lenis | null = null;
 export const setLenis = (l: Lenis | null) => { lenis = l; };
 /** Scroll to a position, gliding with Lenis when it's running. */
-export function scrollToY(y: number, onComplete?: () => void) {
-  if (lenis) lenis.scrollTo(y, { duration: 1.2, onComplete: () => onComplete?.() });
+export function scrollToY(y: number, onComplete?: () => void, duration = 1.2) {
+  if (lenis) lenis.scrollTo(y, { duration, onComplete: () => onComplete?.() });
   else { window.scrollTo({ top: y }); onComplete?.(); }
 }
