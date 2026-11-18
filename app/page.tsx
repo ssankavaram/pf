@@ -7,7 +7,17 @@ import { projects, site, asset, isVideo } from "@/lib/content";
 export default function Home() {
   const items: GlassItem[] = projects.map((p) => {
     const cover = asset(p.cover);
-    return { slug: p.slug, title: p.title, cover, isVideo: isVideo(cover), aspect: p.coverAspect ?? 1.25 };
+    const metric = p.title.match(/\d+%/)?.[0]; // e.g. "47%" from "Lifting engagement by 47%…"
+    return {
+      slug: p.slug,
+      title: p.title,
+      cover,
+      isVideo: isVideo(cover),
+      aspect: p.coverAspect ?? 1.25,
+      short: p.short ?? p.title,
+      category: p.meta.split(" · ")[1] ?? p.meta.split(" · ")[0],
+      metric,
+    };
   });
 
   return (

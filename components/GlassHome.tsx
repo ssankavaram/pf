@@ -12,19 +12,22 @@ export type GlassItem = {
   cover: string;
   isVideo: boolean;
   aspect: number; // cover width ÷ height
+  short: string;    // short name, card title
+  category: string; // pill label
+  metric?: string;  // big number on the card, e.g. "47%"
 };
 
 /* ---- Tuning knobs ------------------------------------------------------- */
 const SCROLL_PER_CARD = 0.8; // screen-heights of scrolling to move one card
-const FOCUS_X = 0.445;       // where the focused card's centre sits, × screen width (lines up with the intro)
-const CARD_Y = 0.6;          // card centre, × section height
-const GAP = 85 / 1440;       // space between cards, × screen width
-const CARD_RATIO = 615 / 370;
+const FOCUS_X = 0.5;         // where the focused card's centre sits, × screen width
+const CARD_Y = 0.63;         // card centre, × section height
+const GAP = 0.09;            // space between cards, × screen width
+const CARD_RATIO = 310 / 392; // portrait, like the reference cards
 // The lens: a curved pane of glass fixed to the screen. Cards are flat in the middle and bend as they
 // slide under its edges.
 const LENS = {
-  bend: 1.25,     // how much taller things get at the edges (vertical magnify)
-  squeeze: 0.06,  // how much they compress sideways at the edges
+  bend: 0.55,     // how much taller things get at the edges (vertical magnify)
+  squeeze: 0.04,  // how much they compress sideways at the edges
   flatPad: 0.02,  // extra flat zone beyond the focused card's own edges (× screen width)
   span: 0.42,     // how wide the bending zone is (× screen width)
   aberr: 0.22,    // rainbow: how far red and blue split apart at the edges
@@ -74,7 +77,9 @@ void main() {
     col.b += samp(warp(vUv + o, 1.0 - ab)).b;
   }
   col /= 5.0;
-  col = mix(col, vec3(1.0), haze * e * e * e);
+  // Milky glow only on the cards, not the empty background (keeps the grey even, no bands).
+  float onCard = smoothstep(0.0, 0.05, distance(col, bg));
+  col = mix(col, vec3(1.0), haze * e * e * e * onCard);
   gl_FragColor = vec4(col, 1.0);
 }`;
 
@@ -86,16 +91,46 @@ type Props = {
 };
 
 // ---- Canvas drawing --------------------------------------------------------
-type Media = HTMLImageElement | HTMLVideoElement;
-const ready = (m: Media) => (m instanceof HTMLVideoElement ? m.readyState >= 2 && m.videoWidth > 0 : m.complete && m.naturalWidth > 0);
-const dims = (m: Media) => (m instanceof HTMLVideoElement ? [m.videoWidth, m.videoHeight] : [m.naturalWidth, m.naturalHeight]);
+// Card looks, cycled per project: soft mesh gradients like the reference video.
+type Stop = [number, string];
+type Layer = { kind: "radial"; x: number; y: number; r: number; stops: Stop[] } | { kind: "linear"; x0: number; y0: number; x1: number; y1: number; stops: Stop[] };
+type Theme = { base: string; layers: Layer[]; ink: string; number: string; chart: boolean };
+const THEMES: Theme[] = [
+  { // teal core, green, peach edges
+    base: "#f5d3c4", ink: "#2b2b30", number: "#ffffff", chart: true,
+    layers: [{ kind: "radial", x: 0.5, y: 0.5, r: 0.75, stops: [[0, "#12b3a6"], [0.32, "#6fd0a4"], [0.62, "#c6e3a6"], [0.85, "#f4cdb8"], [1, "#f5d3c4"]] }],
+  },
+  { // magenta top fading to white
+    base: "#f6f4f8", ink: "#2b2b30", number: "#ffffff", chart: true,
+    layers: [
+      { kind: "linear", x0: 0.5, y0: 0, x1: 0.5, y1: 0.75, stops: [[0, "#b46af5"], [0.35, "#ec86dc"], [0.7, "#f6eef7"], [1, "#f6f4f8"]] },
+      { kind: "radial", x: 0.5, y: 0.22, r: 0.45, stops: [[0, "rgba(120, 90, 255, 0.55)"], [1, "rgba(120, 90, 255, 0)"]] },
+    ],
+  },
+  { // white with a pink-and-blue blob
+    base: "#f6f6f8", ink: "#2b2b30", number: "#ffffff", chart: false,
+    layers: [{ kind: "radial", x: 0.5, y: 0.42, r: 0.36, stops: [[0, "#2f63f4"], [0.38, "#6f8ff8"], [0.62, "#f39ac4"], [0.82, "rgba(247, 186, 214, 0.35)"], [1, "rgba(246, 246, 248, 0)"]] }],
+  },
+  { // violet-blue core
+    base: "#efe8fb", ink: "#2b2b30", number: "#ffffff", chart: true,
+    layers: [{ kind: "radial", x: 0.5, y: 0.48, r: 0.72, stops: [[0, "#2f45f2"], [0.38, "#6b5cf5"], [0.68, "#d48bef"], [1, "#efe8fb"]] }],
+  },
+  { // sky: violet to blue to mist
+    base: "#e4ebfa", ink: "#2b2b30", number: "#ffffff", chart: true,
+    layers: [
+      { kind: "linear", x0: 0.1, y0: 0, x1: 0.9, y1: 1, stops: [[0, "#8b7cf6"], [0.4, "#5a8ef7"], [1, "#d8e3fb"]] },
+      { kind: "radial", x: 0.85, y: 0.15, r: 0.5, stops: [[0, "rgba(255, 255, 255, 0.55)"], [1, "rgba(255, 255, 255, 0)"]] },
+    ],
+  },
+];
 
-function drawCover(ctx: CanvasRenderingContext2D, m: Media, x: number, y: number, w: number, h: number) {
-  const [sw, sh] = dims(m);
-  const s = Math.max(w / sw, h / sh); // object-fit: cover
-  const cw = w / s;
-  const ch = h / s;
-  ctx.drawImage(m, (sw - cw) / 2, (sh - ch) / 2, cw, ch, x, y, w, h);
+function fillLayer(ctx: CanvasRenderingContext2D, L: Layer, x: number, y: number, w: number, h: number) {
+  const g = L.kind === "radial"
+    ? ctx.createRadialGradient(x + L.x * w, y + L.y * h, 0, x + L.x * w, y + L.y * h, L.r * Math.max(w, h))
+    : ctx.createLinearGradient(x + L.x0 * w, y + L.y0 * h, x + L.x1 * w, y + L.y1 * h);
+  for (const [o, c] of L.stops) g.addColorStop(o, c);
+  ctx.fillStyle = g;
+  ctx.fillRect(x, y, w, h);
 }
 
 function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number) {
@@ -109,18 +144,21 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number) {
   return lines;
 }
 
-function drawCard(ctx: CanvasRenderingContext2D, item: GlassItem, media: Media | undefined, tint: string, x: number, y: number, w: number, h: number) {
-  const k = w / 615; // scale relative to the Figma card
-  const r = 16 * k;
+const font = (size: number, weight = 400) => `${weight} ${size}px "Open Runde", ui-rounded, -apple-system, sans-serif`;
 
-  // Glass body + soft shadow
+function drawCard(ctx: CanvasRenderingContext2D, item: GlassItem, i: number, x: number, y: number, w: number, h: number) {
+  const t = THEMES[i % THEMES.length];
+  const k = w / 310; // scale relative to the reference card
+  const r = 14 * k;
+
+  // Card body + soft shadow
   ctx.save();
-  ctx.shadowColor = "rgba(70, 80, 120, 0.18)";
-  ctx.shadowBlur = 40 * k;
-  ctx.shadowOffsetY = 18 * k;
+  ctx.shadowColor = "rgba(60, 70, 110, 0.14)";
+  ctx.shadowBlur = 36 * k;
+  ctx.shadowOffsetY = 16 * k;
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, r);
-  ctx.fillStyle = "rgba(250, 250, 251, 0.96)";
+  ctx.fillStyle = t.base;
   ctx.fill();
   ctx.restore();
 
@@ -128,57 +166,118 @@ function drawCard(ctx: CanvasRenderingContext2D, item: GlassItem, media: Media |
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, r);
   ctx.clip();
-  // Tinted glows inside the glass
-  const g1 = ctx.createRadialGradient(x + w * 0.88, y + h * 0.22, 0, x + w * 0.88, y + h * 0.22, w * 0.62);
-  g1.addColorStop(0, `${tint}88`);
-  g1.addColorStop(1, `${tint}00`);
-  ctx.fillStyle = g1;
-  ctx.fillRect(x, y, w, h);
-  const g2 = ctx.createRadialGradient(x + w * 0.1, y + h, 0, x + w * 0.1, y + h, w * 0.5);
-  g2.addColorStop(0, `${tint}30`);
-  g2.addColorStop(1, `${tint}00`);
-  ctx.fillStyle = g2;
-  ctx.fillRect(x, y, w, h);
+  for (const L of t.layers) fillLayer(ctx, L, x, y, w, h);
 
-  // Cover, peeking up from the bottom right
-  if (media && ready(media)) {
-    const portrait = item.aspect < 1;
-    const ch = portrait ? h * 1.18 : (w * 0.58) / item.aspect;
-    const cw = portrait ? ch * item.aspect : w * 0.58;
-    const cxp = portrait ? x + w - w * 0.065 - cw : x + w * 1.04 - cw;
-    const cyp = portrait ? y + h * 0.3 : y + h * 0.24;
-    ctx.save();
-    ctx.shadowColor = "rgba(40, 40, 70, 0.28)";
-    ctx.shadowBlur = 30 * k;
-    ctx.shadowOffsetY = 14 * k;
+  // Title, top left
+  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = t.ink;
+  ctx.font = font(13 * k);
+  ctx.textAlign = "left";
+  ctx.fillText(item.short, x + 16 * k, y + 26 * k);
+
+  // Pill, top right ("Category ⌄")
+  ctx.font = font(10.5 * k);
+  const label = item.category;
+  const pw = ctx.measureText(label).width + 30 * k;
+  const ph = 22 * k;
+  const px = x + w - 14 * k - pw;
+  const py = y + 12 * k;
+  ctx.beginPath();
+  ctx.roundRect(px, py, pw, ph, ph / 2);
+  ctx.fillStyle = "rgba(255, 255, 255, 0.88)";
+  ctx.fill();
+  ctx.fillStyle = t.ink;
+  ctx.fillText(label, px + 10 * k, py + 14.5 * k);
+  ctx.beginPath(); // chevron
+  ctx.moveTo(px + pw - 16 * k, py + 9.5 * k);
+  ctx.lineTo(px + pw - 13 * k, py + 12.5 * k);
+  ctx.lineTo(px + pw - 10 * k, py + 9.5 * k);
+  ctx.strokeStyle = t.ink;
+  ctx.lineWidth = 1.1 * k;
+  ctx.stroke();
+
+  // Big number (or the project name) + small label
+  const big = item.metric ?? item.short;
+  ctx.textAlign = "center";
+  ctx.fillStyle = t.number;
+  ctx.shadowColor = "rgba(0, 0, 0, 0.12)";
+  ctx.shadowBlur = 12 * k;
+  const bigSize = (item.metric ? 40 : 26) * k;
+  ctx.font = font(bigSize);
+  const cx = x + w / 2 + (t.chart ? 12 * k : 0);
+  const ny = y + h * (t.chart ? 0.3 : 0.42);
+  ctx.fillText(big, cx, ny);
+  ctx.shadowBlur = 0;
+  ctx.font = font(10 * k);
+  ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+  ctx.fillText(item.metric ? "in testing" : item.category.toLowerCase(), cx, ny + 16 * k);
+
+  // Little line chart with a marker
+  if (t.chart) {
+    const pts = [0, 0.02, 0.0, -0.05, -0.02, 0.18, 0.32, 0.36, 0.5, 0.48, 0.42, 0.3, 0.26];
+    const cy0 = y + h * 0.58;
     ctx.beginPath();
-    ctx.roundRect(cxp, cyp, cw, ch, (portrait ? 36 : 14) * k);
-    ctx.fillStyle = "#e9e9e9";
+    pts.forEach((v, j) => {
+      const px2 = x + (j / (pts.length - 1)) * w;
+      const py2 = cy0 - v * h * 0.32;
+      if (j === 0) ctx.moveTo(px2, py2); else ctx.lineTo(px2, py2);
+    });
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+    ctx.lineWidth = 1.6 * k;
+    ctx.lineJoin = "round";
+    ctx.stroke();
+    const mx = x + (8 / (pts.length - 1)) * w;
+    const my = cy0 - pts[8] * h * 0.32;
+    ctx.beginPath();
+    ctx.arc(mx, my, 4.5 * k, 0, Math.PI * 2);
+    ctx.fillStyle = "#ffffff";
     ctx.fill();
-    ctx.restore();
-    ctx.save();
     ctx.beginPath();
-    ctx.roundRect(cxp, cyp, cw, ch, (portrait ? 36 : 14) * k);
-    ctx.clip();
-    drawCover(ctx, media, cxp, cyp, cw, ch);
-    ctx.restore();
+    ctx.moveTo(mx, my);
+    ctx.lineTo(mx, y + h * 0.78);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+    ctx.lineWidth = 1 * k;
+    ctx.stroke();
   }
 
-  // Title
-  ctx.fillStyle = INK;
-  const fs = 16 * k;
-  ctx.font = `400 ${fs}px "Open Runde", ui-rounded, -apple-system, sans-serif`;
-  ctx.textBaseline = "top";
-  const lines = wrap(ctx, item.title, w * 0.4);
-  const lh = fs * 1.6;
-  let ty = y + h / 2 - (lines.length * lh) / 2;
-  for (const l of lines) { ctx.fillText(l, x + w * 0.052, ty + (lh - fs) / 2); ty += lh; }
+  // Frosted panel with the project title
+  const bx = x + 14 * k;
+  const bw = w - 28 * k;
+  const bh = h * 0.2;
+  const by = y + h - bh - 28 * k;
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 12 * k);
+  ctx.fillStyle = "rgba(255, 255, 255, 0.62)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = t.ink;
+  ctx.font = font(10.5 * k);
+  const all = wrap(ctx, item.title, bw - 32 * k);
+  const lines = all.slice(0, 2);
+  if (all.length > 2) { // end the second line with an ellipsis that fits
+    let l = lines[1];
+    while (l && ctx.measureText(`${l}…`).width > bw - 32 * k) l = l.slice(0, -1);
+    lines[1] = `${l.trimEnd()}…`;
+  }
+  const lh = 14 * k;
+  let ty = by + bh / 2 - ((lines.length - 1) * lh) / 2 + 3.5 * k;
+  for (const l of lines) { ctx.fillText(l, x + w / 2, ty); ty += lh; }
+
+  // Page indicator
+  const dotsY = y + h - 12 * k;
+  for (let d = 0; d < 5; d++) {
+    const on = d === 3;
+    ctx.fillStyle = on ? "rgba(30, 30, 35, 0.75)" : "rgba(30, 30, 35, 0.16)";
+    ctx.fillRect(x + w / 2 - 40 * k + d * 17 * k, dotsY, (on ? 16 : 12) * k, 1.6 * k);
+  }
   ctx.restore();
 
   // Bright glass edge
   ctx.beginPath();
   ctx.roundRect(x + 0.5, y + 0.5, w - 1, h - 1, r);
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.95)";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
   ctx.lineWidth = 1.2;
   ctx.stroke();
 }
@@ -277,21 +376,6 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
       const drawCtx = lens ? ctx2d : out.getContext("2d")!;
       const target = lens ? src : out;
 
-      // Load each cover as an image or a muted looping video.
-      const media: Media[] = items.map((p) => {
-        if (p.isVideo) {
-          const v = document.createElement("video");
-          Object.assign(v, { muted: true, loop: true, playsInline: true, autoplay: true, crossOrigin: "anonymous", preload: "auto" });
-          v.src = p.cover;
-          v.play().catch(() => {});
-          return v;
-        }
-        const im = new Image();
-        im.crossOrigin = "anonymous";
-        im.src = p.cover;
-        return im;
-      });
-
       let W = 0, H = 0, dpr = 1, cardW = 0, cardH = 0;
       const size = () => {
         W = el.clientWidth;
@@ -301,8 +385,8 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
         out.height = Math.round(H * dpr);
         src.width = Math.round(W * (1 + 2 * LENS.overscan) * dpr);
         src.height = Math.round(H * dpr);
-        cardW = Math.min(615, 0.427 * W, 0.41 * window.innerHeight * CARD_RATIO);
-        if (W < 810) cardW = 0.84 * W;
+        cardW = Math.min(390, 0.27 * W, 0.49 * H * CARD_RATIO);
+        if (W < 810) cardW = Math.min(0.68 * W, 0.5 * H * CARD_RATIO);
         cardH = cardW / CARD_RATIO;
       };
 
@@ -328,7 +412,7 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
             link.style.height = `${cardH}px`;
           }
           if (x > W + ox + 40 || x + cardW < -ox - 40) return;
-          drawCard(drawCtx, item, media[j], TINTS[j % TINTS.length], x, y, cardW, cardH);
+          drawCard(drawCtx, item, j, x, y, cardW, cardH);
         });
         if (lens) lens.draw(target, focus, 1 - CARD_Y, cardW / 2 / W + LENS.flatPad); // GL's y runs bottom-up
         const a = clamp(Math.round(p), 0, n - 1);
@@ -369,7 +453,6 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
         gsap.ticker.remove(tick);
         ro.disconnect();
         io.disconnect();
-        media.forEach((m) => { if (m instanceof HTMLVideoElement) { m.pause(); m.removeAttribute("src"); m.load(); } });
       };
     });
     mm.add("(prefers-reduced-motion: reduce)", () => { setReduced(true); });
