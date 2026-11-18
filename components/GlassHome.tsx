@@ -36,8 +36,6 @@ const LENS = {
   overscan: 0.18, // cards are drawn this far past each screen edge (× width) so the lens always has content to bend in
 };
 const TINTS = ["#5183f5", "#f58bd0", "#7fd9a8", "#a78bfa", "#ffb86b"];
-const BG = "#f2f2f2";
-const INK = "#241a16";
 /* ------------------------------------------------------------------------ */
 
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
@@ -48,7 +46,7 @@ precision highp float;
 varying vec2 vUv;
 uniform sampler2D tex;
 uniform float cx, cy, r0, span, bend, squeeze, aberr, blur, haze, over;
-uniform vec3 bg;
+uniform vec3 bg, hazeCol;
 // Where to read from, for a given screen point: farther out sideways, closer to the middle vertically.
 vec2 warp(vec2 uv, float k) {
   float dx = uv.x - cx;
@@ -79,7 +77,7 @@ void main() {
   col /= 5.0;
   // Milky glow only on the cards, not the empty background (keeps the grey even, no bands).
   float onCard = smoothstep(0.0, 0.05, distance(col, bg));
-  col = mix(col, vec3(1.0), haze * e * e * e * onCard);
+  col = mix(col, hazeCol, haze * e * e * e * onCard);
   gl_FragColor = vec4(col, 1.0);
 }`;
 
@@ -92,43 +90,53 @@ type Props = {
 
 // ---- Canvas drawing --------------------------------------------------------
 // Card looks, cycled per project: soft mesh gradients like the reference video.
-type Stop = [number, string];
+// Each colour stop has a light value and (optionally) a dark-mode value.
+type Stop = [number, string, string?];
 type Layer = { kind: "radial"; x: number; y: number; r: number; stops: Stop[] } | { kind: "linear"; x0: number; y0: number; x1: number; y1: number; stops: Stop[] };
-type Theme = { base: string; layers: Layer[]; ink: string; number: string; chart: boolean };
+type Theme = { base: [string, string]; layers: Layer[]; chart: boolean };
 const THEMES: Theme[] = [
   { // teal core, green, peach edges
-    base: "#f5d3c4", ink: "#2b2b30", number: "#ffffff", chart: true,
-    layers: [{ kind: "radial", x: 0.5, y: 0.5, r: 0.75, stops: [[0, "#12b3a6"], [0.32, "#6fd0a4"], [0.62, "#c6e3a6"], [0.85, "#f4cdb8"], [1, "#f5d3c4"]] }],
+    base: ["#f5d3c4", "#15181a"], chart: true,
+    layers: [{ kind: "radial", x: 0.5, y: 0.5, r: 0.75, stops: [[0, "#12b3a6"], [0.32, "#6fd0a4", "#3aa889"], [0.62, "#c6e3a6", "#2c5a48"], [0.85, "#f4cdb8", "#1d2a26"], [1, "#f5d3c4", "#15181a"]] }],
   },
   { // magenta top fading to white
-    base: "#f6f4f8", ink: "#2b2b30", number: "#ffffff", chart: true,
+    base: ["#f6f4f8", "#16151b"], chart: true,
     layers: [
-      { kind: "linear", x0: 0.5, y0: 0, x1: 0.5, y1: 0.75, stops: [[0, "#b46af5"], [0.35, "#ec86dc"], [0.7, "#f6eef7"], [1, "#f6f4f8"]] },
+      { kind: "linear", x0: 0.5, y0: 0, x1: 0.5, y1: 0.75, stops: [[0, "#b46af5"], [0.35, "#ec86dc", "#b8509f"], [0.7, "#f6eef7", "#2a1d2c"], [1, "#f6f4f8", "#16151b"]] },
       { kind: "radial", x: 0.5, y: 0.22, r: 0.45, stops: [[0, "rgba(120, 90, 255, 0.55)"], [1, "rgba(120, 90, 255, 0)"]] },
     ],
   },
   { // white with a pink-and-blue blob
-    base: "#f6f6f8", ink: "#2b2b30", number: "#ffffff", chart: false,
-    layers: [{ kind: "radial", x: 0.5, y: 0.42, r: 0.36, stops: [[0, "#2f63f4"], [0.38, "#6f8ff8"], [0.62, "#f39ac4"], [0.82, "rgba(247, 186, 214, 0.35)"], [1, "rgba(246, 246, 248, 0)"]] }],
+    base: ["#f6f6f8", "#141519"], chart: false,
+    layers: [{ kind: "radial", x: 0.5, y: 0.42, r: 0.36, stops: [[0, "#2f63f4"], [0.38, "#6f8ff8"], [0.62, "#f39ac4", "#c0558a"], [0.82, "rgba(247, 186, 214, 0.35)", "rgba(160, 60, 110, 0.25)"], [1, "rgba(246, 246, 248, 0)", "rgba(20, 21, 25, 0)"]] }],
   },
   { // violet-blue core
-    base: "#efe8fb", ink: "#2b2b30", number: "#ffffff", chart: true,
-    layers: [{ kind: "radial", x: 0.5, y: 0.48, r: 0.72, stops: [[0, "#2f45f2"], [0.38, "#6b5cf5"], [0.68, "#d48bef"], [1, "#efe8fb"]] }],
+    base: ["#efe8fb", "#15131d"], chart: true,
+    layers: [{ kind: "radial", x: 0.5, y: 0.48, r: 0.72, stops: [[0, "#2f45f2"], [0.38, "#6b5cf5"], [0.68, "#d48bef", "#7a3f9e"], [1, "#efe8fb", "#15131d"]] }],
   },
   { // sky: violet to blue to mist
-    base: "#e4ebfa", ink: "#2b2b30", number: "#ffffff", chart: true,
+    base: ["#e4ebfa", "#12151c"], chart: true,
     layers: [
-      { kind: "linear", x0: 0.1, y0: 0, x1: 0.9, y1: 1, stops: [[0, "#8b7cf6"], [0.4, "#5a8ef7"], [1, "#d8e3fb"]] },
-      { kind: "radial", x: 0.85, y: 0.15, r: 0.5, stops: [[0, "rgba(255, 255, 255, 0.55)"], [1, "rgba(255, 255, 255, 0)"]] },
+      { kind: "linear", x0: 0.1, y0: 0, x1: 0.9, y1: 1, stops: [[0, "#8b7cf6"], [0.4, "#5a8ef7", "#3f6fd8"], [1, "#d8e3fb", "#1a2233"]] },
+      { kind: "radial", x: 0.85, y: 0.15, r: 0.5, stops: [[0, "rgba(255, 255, 255, 0.55)", "rgba(255, 255, 255, 0.12)"], [1, "rgba(255, 255, 255, 0)"]] },
     ],
   },
 ];
 
-function fillLayer(ctx: CanvasRenderingContext2D, L: Layer, x: number, y: number, w: number, h: number) {
+// Colours that depend on light/dark mode (cards are drawn on canvas, so CSS variables can't reach them).
+const MODE = {
+  light: { bg: "#f2f2f2", ink: "#2b2b30", pill: "rgba(255, 255, 255, 0.88)", panel: "rgba(255, 255, 255, 0.62)", panelEdge: "rgba(255, 255, 255, 0.9)",
+           edge: "rgba(255, 255, 255, 0.85)", shadow: "rgba(60, 70, 110, 0.14)", dotOn: "rgba(30, 30, 35, 0.75)", dotOff: "rgba(30, 30, 35, 0.16)" },
+  dark: { bg: "#0e0f12", ink: "#ececf1", pill: "rgba(255, 255, 255, 0.14)", panel: "rgba(255, 255, 255, 0.08)", panelEdge: "rgba(255, 255, 255, 0.16)",
+          edge: "rgba(255, 255, 255, 0.18)", shadow: "rgba(0, 0, 0, 0.55)", dotOn: "rgba(255, 255, 255, 0.8)", dotOff: "rgba(255, 255, 255, 0.2)" },
+};
+type Mode = (typeof MODE)["light"];
+
+function fillLayer(ctx: CanvasRenderingContext2D, L: Layer, x: number, y: number, w: number, h: number, dark: boolean) {
   const g = L.kind === "radial"
     ? ctx.createRadialGradient(x + L.x * w, y + L.y * h, 0, x + L.x * w, y + L.y * h, L.r * Math.max(w, h))
     : ctx.createLinearGradient(x + L.x0 * w, y + L.y0 * h, x + L.x1 * w, y + L.y1 * h);
-  for (const [o, c] of L.stops) g.addColorStop(o, c);
+  for (const [o, light, darkC] of L.stops) g.addColorStop(o, dark ? darkC ?? light : light);
   ctx.fillStyle = g;
   ctx.fillRect(x, y, w, h);
 }
@@ -146,19 +154,20 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number) {
 
 const font = (size: number, weight = 400) => `${weight} ${size}px "Open Runde", ui-rounded, -apple-system, sans-serif`;
 
-function drawCard(ctx: CanvasRenderingContext2D, item: GlassItem, i: number, x: number, y: number, w: number, h: number) {
+function drawCard(ctx: CanvasRenderingContext2D, item: GlassItem, i: number, x: number, y: number, w: number, h: number, dark: boolean) {
   const t = THEMES[i % THEMES.length];
+  const m: Mode = dark ? MODE.dark : MODE.light;
   const k = w / 310; // scale relative to the reference card
   const r = 14 * k;
 
   // Card body + soft shadow
   ctx.save();
-  ctx.shadowColor = "rgba(60, 70, 110, 0.14)";
+  ctx.shadowColor = m.shadow;
   ctx.shadowBlur = 36 * k;
   ctx.shadowOffsetY = 16 * k;
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, r);
-  ctx.fillStyle = t.base;
+  ctx.fillStyle = t.base[dark ? 1 : 0];
   ctx.fill();
   ctx.restore();
 
@@ -166,11 +175,11 @@ function drawCard(ctx: CanvasRenderingContext2D, item: GlassItem, i: number, x: 
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, r);
   ctx.clip();
-  for (const L of t.layers) fillLayer(ctx, L, x, y, w, h);
+  for (const L of t.layers) fillLayer(ctx, L, x, y, w, h, dark);
 
   // Title, top left
   ctx.textBaseline = "alphabetic";
-  ctx.fillStyle = t.ink;
+  ctx.fillStyle = m.ink;
   ctx.font = font(13 * k);
   ctx.textAlign = "left";
   ctx.fillText(item.short, x + 16 * k, y + 26 * k);
@@ -184,26 +193,25 @@ function drawCard(ctx: CanvasRenderingContext2D, item: GlassItem, i: number, x: 
   const py = y + 12 * k;
   ctx.beginPath();
   ctx.roundRect(px, py, pw, ph, ph / 2);
-  ctx.fillStyle = "rgba(255, 255, 255, 0.88)";
+  ctx.fillStyle = m.pill;
   ctx.fill();
-  ctx.fillStyle = t.ink;
+  ctx.fillStyle = m.ink;
   ctx.fillText(label, px + 10 * k, py + 14.5 * k);
   ctx.beginPath(); // chevron
   ctx.moveTo(px + pw - 16 * k, py + 9.5 * k);
   ctx.lineTo(px + pw - 13 * k, py + 12.5 * k);
   ctx.lineTo(px + pw - 10 * k, py + 9.5 * k);
-  ctx.strokeStyle = t.ink;
+  ctx.strokeStyle = m.ink;
   ctx.lineWidth = 1.1 * k;
   ctx.stroke();
 
   // Big number (or the project name) + small label
   const big = item.metric ?? item.short;
   ctx.textAlign = "center";
-  ctx.fillStyle = t.number;
+  ctx.fillStyle = "#ffffff";
   ctx.shadowColor = "rgba(0, 0, 0, 0.12)";
   ctx.shadowBlur = 12 * k;
-  const bigSize = (item.metric ? 40 : 26) * k;
-  ctx.font = font(bigSize);
+  ctx.font = font((item.metric ? 40 : 26) * k);
   const cx = x + w / 2 + (t.chart ? 12 * k : 0);
   const ny = y + h * (t.chart ? 0.3 : 0.42);
   ctx.fillText(big, cx, ny);
@@ -247,12 +255,12 @@ function drawCard(ctx: CanvasRenderingContext2D, item: GlassItem, i: number, x: 
   const by = y + h - bh - 28 * k;
   ctx.beginPath();
   ctx.roundRect(bx, by, bw, bh, 12 * k);
-  ctx.fillStyle = "rgba(255, 255, 255, 0.62)";
+  ctx.fillStyle = m.panel;
   ctx.fill();
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+  ctx.strokeStyle = m.panelEdge;
   ctx.lineWidth = 1;
   ctx.stroke();
-  ctx.fillStyle = t.ink;
+  ctx.fillStyle = m.ink;
   ctx.font = font(10.5 * k);
   const all = wrap(ctx, item.title, bw - 32 * k);
   const lines = all.slice(0, 2);
@@ -269,7 +277,7 @@ function drawCard(ctx: CanvasRenderingContext2D, item: GlassItem, i: number, x: 
   const dotsY = y + h - 12 * k;
   for (let d = 0; d < 5; d++) {
     const on = d === 3;
-    ctx.fillStyle = on ? "rgba(30, 30, 35, 0.75)" : "rgba(30, 30, 35, 0.16)";
+    ctx.fillStyle = on ? m.dotOn : m.dotOff;
     ctx.fillRect(x + w / 2 - 40 * k + d * 17 * k, dotsY, (on ? 16 : 12) * k, 1.6 * k);
   }
   ctx.restore();
@@ -277,7 +285,7 @@ function drawCard(ctx: CanvasRenderingContext2D, item: GlassItem, i: number, x: 
   // Bright glass edge
   ctx.beginPath();
   ctx.roundRect(x + 0.5, y + 0.5, w - 1, h - 1, r);
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+  ctx.strokeStyle = m.edge;
   ctx.lineWidth = 1.2;
   ctx.stroke();
 }
@@ -312,7 +320,7 @@ function makeLens(canvas: HTMLCanvasElement) {
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   const u = (n: string) => gl.getUniformLocation(prog, n);
-  const U = { cx: u("cx"), cy: u("cy"), over: u("over"), r0: u("r0"), span: u("span"), bend: u("bend"), squeeze: u("squeeze"), aberr: u("aberr"), blur: u("blur"), haze: u("haze"), bg: u("bg") };
+  const U = { cx: u("cx"), cy: u("cy"), over: u("over"), r0: u("r0"), span: u("span"), bend: u("bend"), squeeze: u("squeeze"), aberr: u("aberr"), blur: u("blur"), haze: u("haze"), bg: u("bg"), hazeCol: u("hazeCol") };
   gl.uniform1f(U.bend, LENS.bend);
   gl.uniform1f(U.squeeze, LENS.squeeze);
   gl.uniform1f(U.span, LENS.span);
@@ -320,9 +328,13 @@ function makeLens(canvas: HTMLCanvasElement) {
   gl.uniform1f(U.blur, LENS.blur);
   gl.uniform1f(U.haze, LENS.haze);
   gl.uniform1f(U.over, LENS.overscan);
-  gl.uniform3f(U.bg, 0xf2 / 255, 0xf2 / 255, 0xf2 / 255);
 
   return {
+    setTheme(dark: boolean) {
+      const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255) as [number, number, number];
+      gl.uniform3f(U.bg, ...rgb(dark ? MODE.dark.bg : MODE.light.bg));
+      gl.uniform3f(U.hazeCol, ...(dark ? rgb("#16171b") : ([1, 1, 1] as [number, number, number]))); // dark: far edges fade into the background
+    },
     draw(src: HTMLCanvasElement, cx: number, cy: number, r0: number) {
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, src);
@@ -356,6 +368,7 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
   const links = useRef<(HTMLAnchorElement | null)[]>([]);
   const trigger = useRef<ScrollTrigger | null>(null);
   const activeRef = useRef(0);
+  const darkRef = useRef(false); // follows <html data-theme>
   const [active, setActive] = useState(0);
   const [reduced, setReduced] = useState(false);
   const n = items.length;
@@ -372,6 +385,14 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
       const ctx2d = src.getContext("2d")!;
       let lens: ReturnType<typeof makeLens> = null;
       try { lens = makeLens(out); } catch { lens = null; }
+      // Follow the light/dark toggle (it sets data-theme on <html>).
+      const readTheme = () => {
+        darkRef.current = document.documentElement.dataset.theme === "dark";
+        lens?.setTheme(darkRef.current);
+      };
+      readTheme();
+      const themeWatch = new MutationObserver(readTheme);
+      themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
       // No WebGL: draw straight onto the visible canvas, flat.
       const drawCtx = lens ? ctx2d : out.getContext("2d")!;
       const target = lens ? src : out;
@@ -398,7 +419,8 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
         const focus = W < 810 ? 0.5 : FOCUS_X;
         const ox = lens ? LENS.overscan * W : 0; // shift into the wider source canvas
         drawCtx.setTransform(dpr, 0, 0, dpr, ox * dpr, 0);
-        drawCtx.fillStyle = BG;
+        const dark = darkRef.current;
+        drawCtx.fillStyle = dark ? MODE.dark.bg : MODE.light.bg;
         drawCtx.fillRect(-ox, 0, W + 2 * ox, H);
         const cy = H * CARD_Y;
         items.forEach((item, j) => {
@@ -412,7 +434,7 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
             link.style.height = `${cardH}px`;
           }
           if (x > W + ox + 40 || x + cardW < -ox - 40) return;
-          drawCard(drawCtx, item, j, x, y, cardW, cardH);
+          drawCard(drawCtx, item, j, x, y, cardW, cardH, dark);
         });
         if (lens) lens.draw(target, focus, 1 - CARD_Y, cardW / 2 / W + LENS.flatPad); // GL's y runs bottom-up
         const a = clamp(Math.round(p), 0, n - 1);
@@ -451,6 +473,7 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
       return () => {
         trigger.current = null;
         gsap.ticker.remove(tick);
+        themeWatch.disconnect();
         ro.disconnect();
         io.disconnect();
       };

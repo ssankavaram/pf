@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import ThemeToggle from "./ThemeToggle";
 
 // Frosted pill nav, top right. "Playground" has no page yet, so it shows a little "soon" on hover.
 export default function GlassNav() {
@@ -17,6 +18,7 @@ export default function GlassNav() {
         Playground <span className="soon-badge" aria-hidden>soon</span>
       </span>
       <Link href={links[1].href} className="glass-pill" aria-current={path === "/about" ? "page" : undefined}>{links[1].label}</Link>
+      <ThemeToggle />
     </nav>
   );
 }
