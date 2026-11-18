@@ -20,7 +20,8 @@ export type HomeItem = {
 /* ---- Tuning knobs ------------------------------------------------------- */
 const INTRO_SCROLL = 0.6;     // screen-heights of scrolling to clear the nav + intro and bring the cards to centre
 const SNAP_LEAN = 0.2;      // scroll this far toward the next card (0–1) and it snaps there
-const SNAP_DUR = 0.6;       // how long the snap glide takes (s)
+const SNAP_DUR = 0.8;       // how long the glide to the next card takes (s)
+const WHEEL_PAUSE = 160;    // ms without wheel input that ends a swipe (so trackpad momentum can't skip cards)
 const SCROLL_PER_CARD = 0.8;  // screen-heights of scrolling to move one card
 const CARD_RATIO = 780 / 437; // design cards (Figma node 64:4687)
 const FRAME = 12;             // frame margin around the glass on the focused card (px at design size)
@@ -241,6 +242,36 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
       };
       ScrollTrigger.addEventListener("scrollEnd", snap);
 
+      // Wheel / trackpad inside the carousel: one swipe = one card, so you never stop halfway.
+      // Trackpad momentum keeps firing wheel events after a swipe; they're swallowed until there's
+      // a short pause (or a clearly new, harder flick), so one swipe never skips two cards.
+      let busy = false, armed = true, lastT = 0, lastMag = 0;
+      const onWheel = (e: WheelEvent) => {
+        const st = trigger.current;
+        if (!st || e.ctrlKey || Math.abs(e.deltaY) < Math.abs(e.deltaX)) return; // pinch-zoom, sideways
+        const y = window.scrollY;
+        if (y < st.start - 2 || y > st.end + 2) return; // outside the carousel: scroll normally
+        const pos = ((y - st.start) / (st.end - st.start)) * span;
+        let cur = 0;
+        stops.forEach((s, i) => { if (Math.abs(s - pos) < Math.abs(stops[cur] - pos)) cur = i; });
+        const d = Math.sign(e.deltaY);
+        if (!busy && ((d > 0 && cur === stops.length - 1) || (d < 0 && cur === 0))) return; // leave the carousel normally
+        e.preventDefault();
+        e.stopImmediatePropagation(); // keep Lenis from also scrolling
+        const now = e.timeStamp, mag = Math.abs(e.deltaY); // when the event happened, even if the page was busy
+        const gap = now - lastT;
+        // a new swipe (never mid-glide): after a pause (unless it's still fading momentum), after a long pause, or a sudden harder flick
+        if (!busy && ((gap > WHEEL_PAUSE && mag >= lastMag * 0.9) || gap > 450 || (mag > lastMag * 1.5 && mag > 15))) armed = true;
+        lastT = now; lastMag = mag;
+        if (busy || !armed || mag < 2) return;
+        armed = false;
+        busy = true;
+        const next = Math.max(0, Math.min(stops.length - 1, cur + d));
+        const release = window.setTimeout(() => { busy = false; }, SNAP_DUR * 1000 + 150); // in case the glide is interrupted
+        scrollToY(st.start + (stops[next] / span) * (st.end - st.start), () => { busy = false; clearTimeout(release); }, SNAP_DUR);
+      };
+      window.addEventListener("wheel", onWheel, { passive: false, capture: true });
+
       // Entrance
       gsap.from(".dhome-intro > *", { y: 16, opacity: 0, duration: DUR.slow, ease: EASE.out, stagger: 0.08, delay: 0.1 });
       gsap.from(out, { opacity: 0, duration: DUR.slow, ease: EASE.out, delay: 0.25 });
@@ -248,6 +279,7 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
       return () => {
         trigger.current = null;
         ScrollTrigger.removeEventListener("scrollEnd", snap);
+        window.removeEventListener("wheel", onWheel, { capture: true });
         window.removeEventListener("scroll", onScroll);
         gsap.ticker.remove(tick);
         ro.disconnect();
