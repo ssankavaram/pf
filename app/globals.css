@@ -67,17 +67,18 @@
 :root { color-scheme: light; }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --paper: #0e0f12;
-  --paper-2: #1b1c21;
-  --mist: #15161a;
+  /* From the Figma frame */
+  --paper: #2a2929;      /* hero / page panel */
+  --paper-2: #373636;    /* card frames, tag pills */
+  --mist: #1a1a1a;       /* footer, behind the glass */
   --card: rgba(255, 255, 255, 0.06);
-  --ink: #f3f3f5;
-  --fg: rgba(243, 243, 245, 0.82);
-  --muted: rgba(243, 243, 245, 0.62); /* 7.8:1 on --paper */
+  --ink: #f4efe6;        /* cream text */
+  --fg: rgba(244, 239, 230, 0.82);
+  --muted: rgba(244, 239, 230, 0.62); /* 5.6:1 on --paper */
   --line: rgba(255, 255, 255, 0.14);
-  --glass-fill: rgba(255, 255, 255, 0.07);
-  --glass-edge: rgba(255, 255, 255, 0.16);
-  --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 18px 40px -18px rgba(0, 0, 0, 0.6);
+  --glass-fill: rgba(255, 255, 255, 0.09);
+  --glass-edge: rgba(255, 255, 255, 0.12);
+  --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 18px 40px -18px rgba(0, 0, 0, 0.6);
 }
 /* Crossfade colours while switching, then stop (so normal hovers keep their own timing) */
 html.theme-anim, html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after {
@@ -148,7 +149,7 @@ a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
 .nav-cta:hover { transform: scale(1.04); background: var(--orange); }
 
 /* Content layer that slides up to reveal the footer */
-.page { position: relative; z-index: 1; background: var(--bg); border-radius: 0 0 var(--r-panel) var(--r-panel); overflow: clip; box-shadow: 0 24px 48px rgba(36, 26, 22, 0.3); }
+.page { position: relative; z-index: 1; background: var(--bg); border-radius: 0 0 64px 64px; overflow: clip; box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35); }
 
 /* Hero: statement + sideways-scrolling project row */
 .hs { height: 100svh; display: flex; flex-direction: column; gap: clamp(32px, 5svh, 48px); padding: clamp(40px, 7svh, 64px) 0 32px; overflow: hidden; }
@@ -366,10 +367,6 @@ a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
 .glass-pill:active, .glass-circle:active { transform: scale(0.96); }
 
 /* Nav: pills top right */
-.gnav { position: fixed; z-index: 100; top: calc(32px + env(safe-area-inset-top, 0px)); right: var(--gutter); display: flex; gap: 12px; }
-/* On home the nav lifts away as the carousel takes focus (GlassHome sets --nav-hide 0 → 1 while scrolling) */
-.gnav { transform: translateY(calc(var(--nav-hide, 0) * -140%)); opacity: calc(1 - var(--nav-hide, 0)); }
-:root[data-nav-hidden] .gnav { visibility: hidden; }
 .glass-pill { position: relative; display: inline-flex; align-items: center; min-height: 40px; padding: 8px 14px; border-radius: 999px; font-size: 15px; line-height: 1.4; color: var(--ink); }
 .glass-pill[aria-current="page"] { background: rgba(255, 255, 255, 0.85); }
 .glass-pill.is-soon { cursor: default; }
@@ -517,12 +514,103 @@ a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
 @media (max-width: 809px) {
   .ghome { --card-w: 84vw; }
   .ghome-intro { margin-left: var(--gutter); }
-  .gnav { top: 16px; left: var(--gutter); right: auto; gap: 8px; }
   .glass-pill { font-size: 14px; padding: 6px 12px; }
   .gdock { flex-direction: row; gap: 12px; bottom: 16px; }
   .glass-circle { width: 48px; height: 48px; }
   .glass-tip { display: none; }
   .gcard-title { font-size: 14px; width: 46%; }
+}
+
+/* ================= Dark home (Figma: Untitled, node 52:222) ================= */
+html { background: var(--mist); }
+
+/* Fractal / reeded glass strips (see Fluted.tsx) */
+.fluted { position: absolute; display: flex; background: var(--mist); pointer-events: none; }
+.fluted span { flex: 1 0 0; height: 100%; background-size: 1000% 100%; background-repeat: no-repeat; }
+
+/* Nav: logo left, frosted pill right, both on the shared gutter */
+.gnav-bar { position: fixed; z-index: 100; top: calc(32px + env(safe-area-inset-top, 0px)); left: var(--gutter); right: var(--gutter); display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
+.gnav-bar > * { pointer-events: auto; }
+.gnav-logo img { display: block; width: 39px; height: auto; }
+.gnav { display: flex; align-items: center; gap: 16px; padding: 12px 20px; border-radius: 999px; background: var(--glass-fill); border: 1px solid var(--glass-edge); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+.gnav-link { position: relative; font-size: 16px; line-height: 1.6; color: var(--ink); transition: opacity var(--dur-fast) var(--ease-out); }
+.gnav-link:hover { opacity: 0.75; }
+.gnav-link[aria-current="page"] { font-weight: 700; }
+.gnav-link.is-soon { cursor: default; }
+.gnav .soon-badge { position: absolute; top: -14px; right: -10px; padding: 1px 7px; border-radius: 999px; background: var(--ink); color: var(--paper);
+  font-size: 10px; letter-spacing: 0.04em; font-weight: 400; opacity: 0; transform: translateY(4px) scale(0.9);
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-base) var(--ease-spring); }
+.gnav-link.is-soon:hover .soon-badge, .gnav-link.is-soon:focus-visible .soon-badge { opacity: 1; transform: none; }
+
+/* Contact circles */
+.cicons { display: flex; gap: 11px; }
+.cicon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, 0.06); border: 0.7px solid rgba(255, 255, 255, 0.15);
+  transition: background var(--dur-fast) var(--ease-out), transform var(--dur-base) var(--ease-spring); }
+.cicon:hover { background: rgba(255, 255, 255, 0.14); transform: translateY(-2px); }
+.cicon img { width: 17px; height: 17px; }
+
+/* Section: intro, then the sideways card row, then the active card's name + tags */
+.dhome { --cw: 616px; --k: 1; position: relative; height: 100svh; min-height: 640px; overflow: hidden; display: flex; flex-direction: column; background: var(--bg);
+  padding-top: clamp(92px, 12svh, 124px); }
+.dhome-intro { display: flex; flex-direction: column; align-items: center; gap: 12px; width: min(540px, calc(100% - 2 * var(--gutter))); margin: 0 auto; text-align: center; }
+.dhome-name { font-family: var(--heading); font-weight: 500; font-size: 28px; line-height: 1.12; letter-spacing: -0.01em; color: var(--ink); }
+.dhome-bio { font-size: 16px; line-height: 1.6; color: var(--muted); }
+.dhome-intro .cicons { margin-top: 16px; }
+.dhome-stage { position: relative; height: calc(var(--cw) * 437 / 616); margin-top: clamp(32px, 5.5svh, 56px); }
+.dhome-track { position: absolute; left: 0; top: 0; height: 100%; display: flex; gap: calc(96px * var(--k)); will-change: transform; }
+.dcard { position: relative; flex: none; width: var(--cw); height: 100%; padding: calc(12px * var(--k)); border-radius: 12px; background: var(--paper-2); border: 1px solid rgba(255, 255, 255, 0.18);
+  transition: border-color var(--dur-base) var(--ease-out); }
+.dcard.is-active:hover { border-color: rgba(255, 255, 255, 0.32); }
+.dcard-inner { position: relative; width: 100%; height: 100%; border-radius: 8px; overflow: hidden; }
+/* strip frame is wider and taller than the card (835 × 578 in a 590 × 411 card), centred horizontally */
+.dcard-fluted { left: -20.76%; top: 0; width: 141.52%; height: 140.63%; }
+.dhome-info { width: var(--cw); margin: 14px auto 0; transition: opacity var(--dur-fast) linear; }
+.dhome-line { width: max-content; max-width: min(calc(var(--cw) + 160px), calc(100vw - 2 * var(--gutter))); font-size: 16px; line-height: 1.6; color: var(--ink); } /* may run a little past the card so it stays on one line */
+.dhome-line .is-muted { color: rgba(217, 217, 217, 0.61); }
+.dhome-tags { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 14px; }
+.dhome-tags li { padding: 8px 12px; border-radius: 999px; background: var(--paper-2); font-size: 14px; line-height: 1.6; color: var(--ink); }
+
+/* Reduced motion: no pin; the row scrolls sideways natively */
+.dhome.is-static { height: auto; min-height: 100svh; padding-bottom: 80px; }
+.dhome.is-static .dhome-stage { overflow-x: auto; }
+.dhome.is-static .dhome-track { position: relative; transform: none !important; padding: 0 var(--gutter); }
+
+/* "Volatility explained" widget on the first card — 327px design, scaled with the card */
+.hw { position: absolute; left: 50%; top: 50%; width: 279px; transform: translate(-50%, -50%) scale(var(--k)); transform-origin: 50% 50%;
+  display: flex; flex-direction: column; gap: 16px; font-family: var(--font-inter), "Inter", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+.hw-card { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 10px; padding: 24px; border-radius: 12px; background: #f7f9fd; }
+.hw-chart { position: absolute; right: 0; top: 0; width: 100px; height: 120px; }
+.hw-card::after { content: ""; position: absolute; left: 176px; top: 0; width: 103px; height: 120px; background: linear-gradient(to left, rgba(250, 250, 250, 0), #fafafa 83%); pointer-events: none; }
+.hw-row { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center; }
+.hw-label { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #373737; }
+.hw-close { width: 20px; height: 20px; }
+.hw-q { position: relative; z-index: 1; width: 216px; font-size: 14px; font-weight: 500; line-height: 21px; color: #1f1f1f; }
+.hw-chips { display: flex; gap: 16px; }
+.hw-chips span { flex: none; padding: 8px; border: 1px solid #e4e7ef; border-radius: 12px; background: #fafafa; font-size: 12px; color: #373737; white-space: nowrap; }
+.hw-chips span.is-tint { background: #f7f9fd; }
+
+/* Footer: fractal glass that ripples where the cursor moves (RippleFooter.tsx) */
+.rfooter { position: sticky; bottom: 0; z-index: 0; height: 278px; overflow: hidden; background: var(--mist); color: var(--ink); }
+.rfooter-fluted { inset: 0; width: 100%; height: 100%; }
+.rfooter-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; transition: opacity var(--dur-base) var(--ease-out); }
+.rfooter.is-gl .rfooter-canvas { opacity: 1; }
+.rfooter.is-gl .rfooter-fluted { visibility: hidden; }
+.rfooter-content { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 26px; padding: 60px var(--gutter) 0; pointer-events: none; }
+.rfooter-content > * { pointer-events: auto; width: max-content; }
+.rfooter-thanks { font-size: 16px; line-height: 1.6; }
+.rfooter-links { display: flex; gap: 24px; font-size: 16px; line-height: 1.6; }
+.rfooter-links a, .rfooter-links span { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.rfooter-links span { opacity: 0.6; cursor: default; }
+.rfooter-links a:hover { opacity: 0.75; }
+.rfooter-top { position: absolute; z-index: 1; right: var(--gutter); top: 73px; font-size: 16px; line-height: 1.6; color: rgba(244, 239, 230, 0.5); transition: color var(--dur-fast) var(--ease-out); }
+.rfooter-top:hover { color: var(--ink); }
+
+@media (max-width: 809px) {
+  .gnav { gap: 12px; padding: 8px 14px; }
+  .gnav-link { font-size: 14px; }
+  .dhome-tags { gap: 8px; }
+  .rfooter { height: 300px; }
+  .rfooter-top { top: auto; bottom: 24px; }
 }
 
 /* ================= Case study ================= */

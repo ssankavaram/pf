@@ -33,10 +33,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${display.variable} ${script.variable} ${inter.variable}`} suppressHydrationWarning>
       <head>
-        {/* Set light/dark before first paint so the page never flashes the wrong theme */}
+        {/* Set the theme before first paint */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("theme");if(t!=="light"&&t!=="dark")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme="light";}})();`,
+            __html: `document.documentElement.dataset.theme="dark";`, // the site is dark-only (Figma design)
           }}
         />
       </head>

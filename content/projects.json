@@ -1,6 +1,8 @@
 [
   {
     "slug": "investing-education",
+    "line": "Lifting engagement by 47% at a leading national bank",
+    "cardTags": ["End-to-end", "Enterprise", "Prototyping in code"],
     "coverAspect": 0.48,
     "tags": ["Design engineering", "0 → 1", "Product design", "Claude code", "Figma"],
     "short": "Investing education",
@@ -73,6 +75,7 @@
   },
   {
     "slug": "usbank",
+    "line": "A collection of my public facing work",
     "coverAspect": 1.375,
     "short": "U.S. Bank",
     "title": "A collection of my public facing work at U.S. Bank",
@@ -101,6 +104,7 @@
   },
   {
     "slug": "application-hub",
+    "line": "Cutting banker help-center calls by 18%",
     "coverAspect": 0.865,
     "short": "Application hub",
     "title": "Decreasing banker help center calls on small business applications by 18%",
@@ -158,6 +162,7 @@
   },
   {
     "slug": "projectmorph",
+    "line": "One reliable hub for scattered government resources",
     "coverAspect": 1.256,
     "short": "Project Morph",
     "title": "Consolidating scattered government resource pages into one reliable hub",

@@ -16,6 +16,8 @@ export type Project = {
   coverFit?: "cover" | "contain"; // "contain" shows the whole cover on a grey card (e.g. a phone screen)
   coverAspect?: number; // cover width ÷ height, so gallery cards get the right shape before media loads
   tags?: string[];      // pills under the project in the home gallery (falls back to meta)
+  line?: string;        // one-liner after the name under the home card
+  cardTags?: string[];  // tags under the home card (falls back to tags / meta)
   title: string;
   meta: string;
   cover: string;

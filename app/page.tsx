@@ -1,38 +1,24 @@
 import GlassNav from "@/components/GlassNav";
-import GlassDock from "@/components/GlassDock";
-import GlassHome, { type GlassItem } from "@/components/GlassHome";
-import Footer from "@/components/Footer";
-import { projects, site, asset, isVideo } from "@/lib/content";
+import DarkHome, { type HomeItem } from "@/components/DarkHome";
+import RippleFooter from "@/components/RippleFooter";
+import { projects, site } from "@/lib/content";
 
 export default function Home() {
-  const items: GlassItem[] = projects.map((p) => {
-    const cover = asset(p.cover);
-    const metric = p.title.match(/\d+%/)?.[0]; // e.g. "47%" from "Lifting engagement by 47%…"
-    return {
-      slug: p.slug,
-      title: p.title,
-      cover,
-      isVideo: isVideo(cover),
-      aspect: p.coverAspect ?? 1.25,
-      short: p.short ?? p.title,
-      category: p.meta.split(" · ")[1] ?? p.meta.split(" · ")[0],
-      metric,
-      description: p.intro[0] ?? "",
-      tags: p.tags ?? p.meta.split(" · "),
-    };
-  });
+  const items: HomeItem[] = projects.map((p) => ({
+    slug: p.slug,
+    short: p.short ?? p.title,
+    line: p.line ?? p.title,
+    tags: p.cardTags ?? p.tags?.slice(0, 3) ?? p.meta.split(" · ").slice(0, 3),
+  }));
 
   return (
     <>
       <GlassNav />
-      <GlassDock nav={site.nav} />
-
       {/* Everything above the footer slides up to reveal it */}
       <main className="page">
-        <GlassHome name={site.name} bio={site.bio} currently={site.currently} items={items} />
+        <DarkHome name={site.name} bio={site.bio} currently={site.currently} nav={site.nav} items={items} />
       </main>
-
-      <Footer name={site.name} currently={site.currently} nav={site.nav} />
+      <RippleFooter nav={site.nav} />
     </>
   );
 }
