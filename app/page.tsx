@@ -17,6 +17,8 @@ export default function Home() {
       short: p.short ?? p.title,
       category: p.meta.split(" · ")[1] ?? p.meta.split(" · ")[0],
       metric,
+      description: p.intro[0] ?? "",
+      tags: p.tags ?? p.meta.split(" · "),
     };
   });
 

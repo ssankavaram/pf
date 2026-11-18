@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { DUR, EASE, SCRUB, scrollToY } from "@/lib/motion";
+import { DUR, EASE, SCRUB, STAGGER, scrollToY } from "@/lib/motion";
 
 export type GlassItem = {
   slug: string;
@@ -15,12 +15,17 @@ export type GlassItem = {
   short: string;    // short name, card title
   category: string; // pill label
   metric?: string;  // big number on the card, e.g. "47%"
+  description: string; // first line of the case study intro, shown under the centred card
+  tags: string[];
 };
 
 /* ---- Tuning knobs ------------------------------------------------------- */
+const INTRO_SCROLL = 0.6;    // screen-heights of scrolling to clear the nav + intro and bring the cards to centre
 const SCROLL_PER_CARD = 0.8; // screen-heights of scrolling to move one card
 const FOCUS_X = 0.5;         // where the focused card's centre sits, × screen width
-const CARD_Y = 0.63;         // card centre, × section height
+const CARD_Y = 0.63;         // card centre at the start, × section height (below the intro)
+const CARD_Y_FOCUS = 0.4;    // card centre once the intro has cleared (leaves room for the text below)
+const FOCUS_GROW = 1.06;     // cards grow a little as they take focus
 const GAP = 0.09;            // space between cards, × screen width
 const CARD_RATIO = 310 / 392; // portrait, like the reference cards
 // The lens: a curved pane of glass fixed to the screen. Cards are flat in the middle and bend as they
@@ -365,6 +370,7 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
   const root = useRef<HTMLElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const intro = useRef<HTMLDivElement>(null);
+  const info = useRef<HTMLDivElement>(null);
   const links = useRef<(HTMLAnchorElement | null)[]>([]);
   const trigger = useRef<ScrollTrigger | null>(null);
   const activeRef = useRef(0);
@@ -411,34 +417,62 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
         cardH = cardW / CARD_RATIO;
       };
 
-      const state = { p: 0 };
+      // q runs 0 → n: 0–1 clears the intro, then 1 → n moves the carousel (p = q − 1).
+      const state = { q: 0 };
+      let leftPin = false; // nav comes back once you've scrolled past the carousel
+      const travel = gsap.parseEase(EASE.inOut);
       const frame = () => {
         if (!W) return;
-        const p = state.p;
-        const spacing = cardW + GAP * W;
+        const introT = travel(clamp(state.q, 0, 1));
+        const p = Math.max(0, state.q - 1);
+        const grow = 1 + (FOCUS_GROW - 1) * introT;
+        const cw = cardW * grow;
+        const chh = cardH * grow;
+        const cardY = CARD_Y + (CARD_Y_FOCUS - CARD_Y) * introT;
+        const spacing = cw + GAP * W;
+
+        // Intro lifts away; the nav follows (GlassNav reads --nav-hide).
+        if (intro.current) {
+          intro.current.style.opacity = String(1 - introT);
+          intro.current.style.transform = `translateY(${-60 * introT}px)`;
+          intro.current.style.visibility = introT < 0.99 ? "visible" : "hidden";
+        }
+        const navHide = leftPin ? 0 : introT;
+        const html = document.documentElement;
+        html.style.setProperty("--nav-hide", navHide.toFixed(3));
+        if (navHide > 0.95) html.dataset.navHidden = ""; else delete html.dataset.navHidden;
         const focus = W < 810 ? 0.5 : FOCUS_X;
         const ox = lens ? LENS.overscan * W : 0; // shift into the wider source canvas
         drawCtx.setTransform(dpr, 0, 0, dpr, ox * dpr, 0);
         const dark = darkRef.current;
         drawCtx.fillStyle = dark ? MODE.dark.bg : MODE.light.bg;
         drawCtx.fillRect(-ox, 0, W + 2 * ox, H);
-        const cy = H * CARD_Y;
+        const cy = H * cardY;
         items.forEach((item, j) => {
           const xc = focus * W + (j - p) * spacing;
-          const x = xc - cardW / 2;
-          const y = cy - cardH / 2;
+          const x = xc - cw / 2;
+          const y = cy - chh / 2;
           const link = links.current[j];
           if (link) {
             link.style.transform = `translate3d(${x}px, ${y}px, 0)`;
-            link.style.width = `${cardW}px`;
-            link.style.height = `${cardH}px`;
+            link.style.width = `${cw}px`;
+            link.style.height = `${chh}px`;
           }
-          if (x > W + ox + 40 || x + cardW < -ox - 40) return;
-          drawCard(drawCtx, item, j, x, y, cardW, cardH, dark);
+          if (x > W + ox + 40 || x + cw < -ox - 40) return;
+          drawCard(drawCtx, item, j, x, y, cw, chh, dark);
         });
-        if (lens) lens.draw(target, focus, 1 - CARD_Y, cardW / 2 / W + LENS.flatPad); // GL's y runs bottom-up
+        if (lens) lens.draw(target, focus, 1 - cardY, cw / 2 / W + LENS.flatPad); // GL's y runs bottom-up
         const a = clamp(Math.round(p), 0, n - 1);
         if (a !== activeRef.current) { activeRef.current = a; setActive(a); }
+
+        // Case study text under the centred card: there once the intro has cleared and a card has settled.
+        if (info.current) {
+          const settle = 1 - travel(clamp(Math.abs(p - a) / 0.35, 0, 1));
+          const shown = clamp((introT - 0.5) * 2, 0, 1) * settle;
+          info.current.style.top = `${cy + chh / 2 + 28}px`;
+          info.current.style.opacity = shown.toFixed(3);
+          info.current.style.visibility = shown > 0.02 ? "visible" : "hidden";
+        }
       };
 
       size();
@@ -452,18 +486,21 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
       const tick = () => { if (visible) frame(); };
       gsap.ticker.add(tick);
 
-      const tween = gsap.fromTo(state, { p: 0 }, {
-        p: n - 1,
-        ease: "none",
+      // Scroll: first clear the intro, then move through the cards. Durations = share of the scroll.
+      const tl = gsap.timeline({
         scrollTrigger: {
           trigger: el,
           start: "top top",
-          end: () => `+=${window.innerHeight * SCROLL_PER_CARD * (n - 1)}`,
+          end: () => `+=${window.innerHeight * (INTRO_SCROLL + SCROLL_PER_CARD * (n - 1))}`,
           pin: true,
           scrub: SCRUB,
+          onLeave: () => { leftPin = true; },
+          onEnterBack: () => { leftPin = false; },
         },
       });
-      trigger.current = tween.scrollTrigger ?? null;
+      tl.to(state, { q: 1, ease: "none", duration: INTRO_SCROLL });
+      if (n > 1) tl.to(state, { q: n, ease: "none", duration: SCROLL_PER_CARD * (n - 1) });
+      trigger.current = tl.scrollTrigger ?? null;
 
       // Entrance: intro rises in, the carousel fades up.
       const parts = intro.current ? Array.from(intro.current.children) : [];
@@ -474,6 +511,8 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
         trigger.current = null;
         gsap.ticker.remove(tick);
         themeWatch.disconnect();
+        document.documentElement.style.removeProperty("--nav-hide");
+        delete document.documentElement.dataset.navHidden;
         ro.disconnect();
         io.disconnect();
       };
@@ -485,8 +524,22 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
   const goTo = (k: number) => {
     const st = trigger.current;
     if (!st || n < 2) return;
-    scrollToY(st.start + (k / (n - 1)) * (st.end - st.start));
+    const total = INTRO_SCROLL + SCROLL_PER_CARD * (n - 1);
+    scrollToY(st.start + ((INTRO_SCROLL + k * SCROLL_PER_CARD) / total) * (st.end - st.start));
   };
+
+  // When a project centres: its title, description, tags and link rise in one after another.
+  useEffect(() => {
+    if (reduced) return;
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        ".ghome-info-title, .ghome-info-desc, .ghome-info-tags li, .ghome-info-cta",
+        { y: 14, opacity: 0 },
+        { y: 0, opacity: 1, duration: DUR.base, ease: EASE.out, stagger: STAGGER },
+      );
+    }, info);
+    return () => ctx.revert();
+  }, [active, reduced]);
   // Side card click brings it into focus; the focused card opens the case study.
   const onCardClick = (k: number) => (e: React.MouseEvent) => {
     if (k === active) return;
@@ -537,6 +590,18 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
           onFocus={() => { if (i !== activeRef.current) goTo(i); }}
         />
       ))}
+      <div ref={info} className="ghome-info" aria-live="polite">
+        {items[active] && (
+          <div key={items[active].slug} className="ghome-info-inner">
+            <Link href={`/${items[active].slug}`} className="ghome-info-title">{items[active].title}</Link>
+            <p className="ghome-info-desc">{items[active].description}</p>
+            <ul className="ghome-info-tags">
+              {items[active].tags.map((t) => <li key={t}>{t}</li>)}
+            </ul>
+            <Link href={`/${items[active].slug}`} className="ghome-info-cta"><span className="ulink">View case study</span> →</Link>
+          </div>
+        )}
+      </div>
     </section>
   );
 }
