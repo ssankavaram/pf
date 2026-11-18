@@ -21,8 +21,8 @@ export type HomeItem = {
 const INTRO_SCROLL = 0.6;     // screen-heights of scrolling to clear the nav + intro and bring the cards to centre
 const SCROLL_PER_CARD = 0.8;  // screen-heights of scrolling to move one card
 const CARD_RATIO = 763 / 437; // design card (Figma node 61:2831)
-const FRAME = 12;             // frame margin around the glass when focused/hovered (px at design size)
-const CARD_Y = 0.78;          // card centre at the start (under the intro, bottom may be cut off), × section height
+const FRAME = 12;             // frame margin around the glass on the focused card (px at design size)
+const CARD_TOP_GAP = 48;      // space between the intro and the card at the start (px; card bottom may be cut off)
 const CARD_Y_FOCUS = 0.42;    // card centre once the intro has cleared (room for the caption below)
 const FOCUS_GROW = 1.04;      // cards grow a little as they take focus…
 const IMMERSE_GROW = 1.04;    // …and keep growing gently through the carousel
@@ -36,7 +36,7 @@ const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 /**
  * One card. Fractal glass (Figma recipe: 31 strips, each a 10% slice of the image stepping 3% across,
  * over a frame 141.5% × 140.6% of the glass, centred) fills the card; `frame` (0–1) eases in the
- * #373636 margin, stroke and smaller inner radius used for the focused / hovered card.
+ * #373636 margin, stroke and smaller inner radius used for the focused card.
  */
 function drawCard(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number, frame: number, cover?: HTMLImageElement) {
   const k = w / 763;
@@ -64,9 +64,8 @@ function drawCard(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: numbe
     // A finished card design from Figma (exported at 2×), filling the glass area.
     if (cover.complete && cover.naturalWidth) ctx.drawImage(cover, ix, iy, iw, ih);
   } else if (img.complete && img.naturalWidth) {
-    const F = iw * 1.4152, fx = ix - iw * 0.2076, sw = F / 31, fh = ih * 1.4063;
-    const IW = img.naturalWidth, IH = img.naturalHeight;
-    for (let i = 0; i < 31; i++) ctx.drawImage(img, 0.03 * i * IW, 0, 0.1 * IW, IH, fx + i * sw, iy, sw + 0.6, fh);
+    // Smooth glass gradient (no reeded strips, so no vertical lines)
+    ctx.drawImage(img, ix - iw * 0.2076, iy, iw * 1.4152, ih * 1.4063);
   }
   ctx.restore();
 }
@@ -86,7 +85,6 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
   const info = useRef<HTMLDivElement>(null);
   const links = useRef<(HTMLAnchorElement | null)[]>([]);
   const trigger = useRef<ScrollTrigger | null>(null);
-  const hover = useRef({ idx: -1, t: 0 });
   const activeRef = useRef(0);
   const [active, setActive] = useState(0);
   const [reduced, setReduced] = useState(false);
@@ -116,7 +114,7 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
         return c;
       });
 
-      let W = 0, H = 0, dpr = 1, cardW = 0, cardH = 0;
+      let W = 0, H = 0, dpr = 1, cardW = 0, cardH = 0, introBottom = 300;
       const size = () => {
         W = el.clientWidth;
         H = el.clientHeight;
@@ -128,6 +126,8 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
         cardW = Math.min(1040, 0.62 * W, 0.6 * H * CARD_RATIO); // big: the focused card fills most of the screen
         if (W < 810) cardW = 0.86 * W;
         cardH = cardW / CARD_RATIO;
+        if (intro.current) introBottom = intro.current.offsetTop + intro.current.offsetHeight;
+        document.documentElement.style.setProperty("--col", `${Math.round(cardW)}px`);
       };
 
       // q runs 0 → n: 0–1 clears the nav + intro, then 1 → n moves the carousel (p = q − 1).
@@ -141,7 +141,8 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
         const progress = n > 1 ? p / (n - 1) : 0;
         const grow = (1 + (FOCUS_GROW - 1) * introT) * (1 + (IMMERSE_GROW - 1) * progress);
         const cw = cardW * grow, chh = cardH * grow;
-        const cardY = CARD_Y + (CARD_Y_FOCUS - CARD_Y) * introT;
+        const startY = (introBottom + CARD_TOP_GAP + chh / 2) / H;
+        const cardY = startY + (CARD_Y_FOCUS - startY) * introT;
         const cy = H * cardY;
         const spacing = cw + GAP * W;
         const focus = 0.5;
@@ -170,10 +171,8 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
             link.style.width = `${cw}px`;
             link.style.height = `${chh}px`;
           }
-          // Frame shows on the focused card (once the intro has cleared) and on hover.
-          const focused = (1 - clamp(Math.abs(j - p) / 0.35, 0, 1)) * introT;
-          const hov = hover.current.idx === j ? hover.current.t : 0;
-          const f = Math.max(focused, hov);
+          // Frame shows on the focused card once the intro has cleared.
+          const f = (1 - clamp(Math.abs(j - p) / 0.35, 0, 1)) * introT;
           if (x > W + ox + 40 || x + cw < -ox - 40) return;
           drawCard(drawCtx, img, x, y, cw, chh, f, covers[j]);
         });
@@ -227,6 +226,7 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
         ro.disconnect();
         io.disconnect();
         document.documentElement.style.removeProperty("--nav-hide");
+        document.documentElement.style.removeProperty("--col");
         delete document.documentElement.dataset.navHidden;
       };
     });
@@ -256,8 +256,6 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
     goTo(k);
   };
   // Hover eases the frame in around the glass.
-  const hoverIn = (i: number) => { hover.current.idx = i; gsap.to(hover.current, { t: 1, duration: DUR.base, ease: EASE.out, overwrite: true }); };
-  const hoverOut = () => { gsap.to(hover.current, { t: 0, duration: DUR.base, ease: EASE.out, overwrite: true }); };
 
   const introBlock = (
     <div ref={intro} className="dhome-intro">
@@ -303,7 +301,7 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
     <section ref={root} id="top" className="dhome" aria-label="Selected work">
       <canvas ref={canvas} className="dhome-canvas" aria-hidden />
       {introBlock}
-      {/* Real links laid over the drawn cards: clicks, keyboard focus, screen readers, hover */}
+      {/* Real links laid over the drawn cards: clicks, keyboard focus, screen readers */}
       {items.map((p, i) => (
         <Link
           key={p.slug}
@@ -313,8 +311,6 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
           ref={(el) => { links.current[i] = el; }}
           onClick={onCardClick(i)}
           onFocus={() => { if (i !== activeRef.current) goTo(i); }}
-          onMouseEnter={() => hoverIn(i)}
-          onMouseLeave={hoverOut}
         />
       ))}
       <div ref={info} className="dhome-info" aria-live="polite">
