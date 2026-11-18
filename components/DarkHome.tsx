@@ -171,10 +171,8 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
             link.style.width = `${cw}px`;
             link.style.height = `${chh}px`;
           }
-          // Frame shows on the focused card once the intro has cleared.
-          const f = (1 - clamp(Math.abs(j - p) / 0.35, 0, 1)) * introT;
           if (x > W + ox + 40 || x + cw < -ox - 40) return;
-          drawCard(drawCtx, img, x, y, cw, chh, f, covers[j]);
+          drawCard(drawCtx, img, x, y, cw, chh, 0, covers[j]); // no focus frame: the card fills edge to edge
         });
         if (lens) lens.draw(target, focus, 1 - cardY, Math.max(LENS.flat, cw * 0.5 / W)); // flat middle, bends toward the screen edges // GL's y runs bottom-up
 
@@ -255,7 +253,6 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
     e.preventDefault();
     goTo(k);
   };
-  // Hover eases the frame in around the glass.
 
   const introBlock = (
     <div ref={intro} className="dhome-intro">

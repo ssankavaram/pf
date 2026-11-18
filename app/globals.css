@@ -556,12 +556,12 @@ html { background: var(--mist); }
 .dhome { position: relative; height: 100svh; min-height: 640px; overflow: hidden; background: var(--bg); }
 .dhome-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .dhome-intro { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: flex-start; gap: 12px;
-  width: min(var(--col, 778px), calc(100% - 2 * var(--gutter))); margin: 0 auto; padding-top: calc(32px + 42px + 10px); will-change: opacity, transform; }
+  width: min(var(--col, 778px), calc(100% - 2 * var(--gutter))); margin: 0 auto; padding-top: calc(32px + 42px + 56px); will-change: opacity, transform; }
 .dhome-name { font-family: var(--heading); font-weight: 500; font-size: 21px; line-height: 1.12; letter-spacing: -0.01em; color: var(--ink); }
 .dhome-bio { max-width: 614px; font-size: 16px; line-height: 1.6; letter-spacing: -0.02em; color: rgba(244, 239, 230, 0.73); }
 .dhome-intro .cicons { margin-top: 20px; }
 .dhome-hit { position: absolute; left: 0; top: 0; z-index: 3; border-radius: 12px; will-change: transform; }
-.dhome-hit:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+.dhome-hit:focus-visible { outline: none; }
 .dhome-widget { --k: 1; position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none; will-change: transform, opacity; }
 .dhome-info { position: absolute; left: 0; top: 0; z-index: 4; visibility: hidden; }
 .dhome-line { width: max-content; max-width: min(calc(100% + 160px), calc(100vw - 2 * var(--gutter))); font-size: 16px; line-height: 1.6; color: var(--ink); } /* may run a little past the card to stay on one line */
@@ -573,7 +573,7 @@ html { background: var(--mist); }
 .dhome.is-static { height: auto; min-height: 100svh; padding-bottom: 80px; }
 .dhome-row { display: flex; gap: 32px; overflow-x: auto; padding: 48px var(--gutter) 0; }
 .dcard-static { flex: none; width: min(780px, 84vw); display: flex; flex-direction: column; gap: 14px; }
-.dcard { --k: 1; position: relative; width: 100%; aspect-ratio: 780 / 437; padding: 12px; border-radius: 12px; background: var(--paper-2); border: 1px solid rgba(255, 255, 255, 0.18); }
+.dcard { --k: 1; position: relative; width: 100%; aspect-ratio: 780 / 437; border-radius: 12px; overflow: hidden; background: var(--mist); }
 .dcard-inner { position: relative; width: 100%; height: 100%; border-radius: 8px; overflow: hidden; }
 .dcard-fluted { left: -20.76%; top: 0; width: 141.52%; height: 140.63%; }
 .dcard-cover { display: block; width: 100%; height: 100%; object-fit: cover; }
@@ -593,19 +593,19 @@ html { background: var(--mist); }
 .hw-chips span.is-tint { background: #f7f9fd; }
 
 /* Footer: fractal glass that ripples where the cursor moves (RippleFooter.tsx) */
-.rfooter { position: sticky; bottom: 0; z-index: 0; height: 278px; overflow: hidden; background: var(--mist); color: var(--ink); }
+.rfooter { position: sticky; bottom: 0; z-index: 0; height: 244px; overflow: hidden; background: #232323; color: var(--ink); }
 .rfooter-fluted { inset: 0; width: 100%; height: 100%; }
 .rfooter-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; transition: opacity var(--dur-base) var(--ease-out); }
 .rfooter.is-gl .rfooter-canvas { opacity: 1; }
 .rfooter.is-gl .rfooter-fluted { visibility: hidden; }
-.rfooter-content { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 26px; padding: 60px var(--gutter) 0; pointer-events: none; }
+.rfooter-content { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 26px; padding: 46px var(--gutter) 0; pointer-events: none; }
 .rfooter-content > * { pointer-events: auto; width: max-content; }
 .rfooter-thanks { font-size: 16px; line-height: 1.6; }
 .rfooter-links { display: flex; gap: 24px; font-size: 16px; line-height: 1.6; }
 .rfooter-links a, .rfooter-links span { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
-.rfooter-links span { opacity: 0.6; cursor: default; }
+.rfooter-links span { cursor: default; }
 .rfooter-links a:hover { opacity: 0.75; }
-.rfooter-top { position: absolute; z-index: 1; right: var(--gutter); top: 73px; font-size: 16px; line-height: 1.6; color: rgba(244, 239, 230, 0.5); transition: color var(--dur-fast) var(--ease-out); }
+.rfooter-top { position: absolute; z-index: 1; right: var(--gutter); top: 59px; font-size: 16px; line-height: 1.6; color: rgba(244, 239, 230, 0.5); transition: color var(--dur-fast) var(--ease-out); }
 .rfooter-top:hover { color: var(--ink); }
 
 @media (max-width: 809px) {
