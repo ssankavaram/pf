@@ -427,7 +427,7 @@ a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
 
 /* Lens carousel: cards are drawn on a canvas and bent by a WebGL lens; real links sit on top */
 .ghome-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.ghome-hit { position: absolute; left: 0; top: 0; z-index: 3; border-radius: 16px; will-change: transform; }
+.ghome-hit { position: absolute; left: 0; top: 0; z-index: 3; border-radius: 12px; will-change: transform; }
 .ghome-hit:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
 
 /* Text under the centred card: name left, tags spread right, one line below (position + fade set from scroll) */
@@ -447,7 +447,8 @@ a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
 
 /* Product moment on the first card ("Big picture → Volatility explained", from Figma).
    402 × 619 design box, scaled by GlassHome to fit the card; transparent background. */
-.ghome-demo { position: absolute; left: 0; top: 0; z-index: 2; transform-origin: 0 0; pointer-events: none; will-change: transform, opacity; }
+.ghome-demo { position: absolute; left: 0; top: 0; z-index: 2; overflow: hidden; border-radius: 12px; pointer-events: none; will-change: transform, opacity; }
+.ghome-demo-inner { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
 .vd { position: relative; width: 402px; height: 619px; font-family: var(--font-inter), "Inter", system-ui, sans-serif; color: #373737; -webkit-font-smoothing: antialiased; }
 .vd-widget { position: absolute; left: 0; top: 37px; width: 402px; padding: 0 24px; display: flex; flex-direction: column; gap: 16px; }
 .vd-card {

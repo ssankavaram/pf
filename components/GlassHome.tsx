@@ -28,6 +28,7 @@ const CARD_Y = 0.63;         // card centre at the start, × section height (bel
 const CARD_Y_FOCUS = 0.42;   // image centre once the intro has cleared (leaves room for the text below)
 const FOCUS_GROW = 1.06;     // cards grow a little as they take focus
 const IMMERSE_GROW = 1.08;   // …and keep growing gently as you scroll through the carousel
+const DEMO_WIDTH = 0.56;     // product animation on the first card: widget width as a share of the card
 const GAP = 0.05;            // space between cards, × screen width
 const CARD_RATIO = 2172 / 1150; // wide image, like the reference card
 // The lens: a curved pane of glass fixed to the screen. Cards are flat in the middle and bend as they
@@ -101,10 +102,11 @@ const MODE = { light: { bg: "#f2f2f2" }, dark: { bg: "#0e0f12" } };
 // Glass card gradients, one per project (cycled). Each: a base colour, soft colour glows
 // (x, y as fractions of the card; r as a fraction of its width), and the colour of the light rim.
 type Glow = { x: number; y: number; r: number; c: string; solid?: boolean; sy?: number }; // solid: full-strength colour instead of added light; sy: squash into a wide oval
-type Glass = { base: string; glows: Glow[]; rim: string; sheen?: number }; // sheen: light across the top (default 0.14)
+// sheen: light across the top (default 0.14); fluted: reeded "fractal" glass; dim: darken (0–1) so content on top reads
+type Glass = { base: string; glows: Glow[]; rim: string; sheen?: number; fluted?: boolean; dim?: number };
 export const GLASS: Glass[] = [
   { // "Industry best practices": black top-left, violet-blue from the right, blue band + white fog along the bottom, teal corner
-    base: "#05050a", rim: "rgba(200, 210, 255, 0.32)", sheen: 0.02,
+    base: "#05050a", rim: "rgba(200, 210, 255, 0.32)", sheen: 0.02, fluted: true, dim: 0.35,
     glows: [
       { x: 1.02, y: 0.4, r: 0.42, sy: 0.9, c: "rgba(112, 58, 255, 1)" },
       { x: 0.86, y: 0.58, r: 0.34, sy: 0.8, c: "rgba(64, 80, 255, 0.85)" },
@@ -158,21 +160,14 @@ export const GLASS: Glass[] = [
  * One glass card: dark base, colour glows, a soft light rim inside the edges and a thin bright edge.
  * `glow` (0–1) brightens the rim on hover.
  */
-function drawCard(ctx: CanvasRenderingContext2D, i: number, x: number, y: number, w: number, h: number, glow: number) {
-  const g = GLASS[i % GLASS.length];
-  const r = Math.min(w, h) * 0.12;
-  const k = w / 720;
+const CARD_RADIUS = 12; // px
 
-  ctx.save();
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, r);
-  ctx.clip();
-
+// Paint a card's gradient (base + glows) into (x, y, w, h). No clipping; caller clips.
+function paintGradient(ctx: CanvasRenderingContext2D, g: Glass, x: number, y: number, w: number, h: number) {
   ctx.fillStyle = g.base;
   ctx.fillRect(x, y, w, h);
-  ctx.globalCompositeOperation = "screen"; // glows add light, like light through glass, instead of muddying
   for (const o of g.glows) {
-    ctx.globalCompositeOperation = o.solid ? "source-over" : "screen";
+    ctx.globalCompositeOperation = o.solid ? "source-over" : "screen"; // glows add light, like light through glass
     const cx = x + o.x * w, cy = y + o.y * h, rr = o.r * w, sy = o.sy ?? 1;
     ctx.save();
     ctx.translate(cx, cy);
@@ -185,6 +180,56 @@ function drawCard(ctx: CanvasRenderingContext2D, i: number, x: number, y: number
     ctx.restore();
   }
   ctx.globalCompositeOperation = "source-over";
+}
+
+// Reused offscreen canvas for the fluted ("fractal") glass effect.
+let flutedSrc: HTMLCanvasElement | null = null;
+
+/**
+ * Fractal / reeded glass: the gradient seen through vertical glass ridges. Each ridge shows a
+ * slightly wider slice of the gradient squeezed into it (so neighbours repeat and shift), with a
+ * light-to-shadow shading across the ridge.
+ */
+function paintFluted(ctx: CanvasRenderingContext2D, g: Glass, x: number, y: number, w: number, h: number, dpr: number) {
+  flutedSrc ??= document.createElement("canvas");
+  const sw = Math.ceil(w * dpr), sh = Math.ceil(h * dpr);
+  if (flutedSrc.width !== sw || flutedSrc.height !== sh) { flutedSrc.width = sw; flutedSrc.height = sh; }
+  const sc = flutedSrc.getContext("2d")!;
+  sc.setTransform(dpr, 0, 0, dpr, 0, 0);
+  sc.clearRect(0, 0, w, h);
+  paintGradient(sc, g, 0, 0, w, h);
+
+  const ridge = Math.max(14, w / 30); // ridge width
+  for (let rx = 0; rx < w; rx += ridge) {
+    const rw = Math.min(ridge, w - rx);
+    // Each ridge magnifies a slice 1.7× its width, centred a little off its own position.
+    const sliceW = rw * 1.7;
+    const sliceX = Math.max(0, Math.min(w - sliceW, rx + rw / 2 - sliceW / 2 + rw * 0.35));
+    ctx.drawImage(flutedSrc, sliceX * dpr, 0, sliceW * dpr, sh, x + rx, y, rw + 0.5, h);
+    // Ridge shading: shadow on the left edge, highlight just right of centre, shadow again.
+    const shade = ctx.createLinearGradient(x + rx, 0, x + rx + rw, 0);
+    shade.addColorStop(0, "rgba(0, 0, 0, 0.22)");
+    shade.addColorStop(0.55, "rgba(255, 255, 255, 0.07)");
+    shade.addColorStop(0.8, "rgba(255, 255, 255, 0.02)");
+    shade.addColorStop(1, "rgba(0, 0, 0, 0.18)");
+    ctx.fillStyle = shade;
+    ctx.fillRect(x + rx, y, rw + 0.5, h);
+  }
+}
+
+function drawCard(ctx: CanvasRenderingContext2D, i: number, x: number, y: number, w: number, h: number, glow: number, dpr: number) {
+  const g = GLASS[i % GLASS.length];
+  const r = CARD_RADIUS;
+  const k = w / 720;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, r);
+  ctx.clip();
+
+  if (g.fluted) paintFluted(ctx, g, x, y, w, h, dpr);
+  else paintGradient(ctx, g, x, y, w, h);
+  if (g.dim) { ctx.fillStyle = `rgba(0, 0, 0, ${g.dim})`; ctx.fillRect(x, y, w, h); } // dim behind content
 
   // Light rim: a glow cast inward from just outside the edge (classic inner-shadow trick).
   ctx.beginPath();
@@ -367,12 +412,18 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
           const x = xc - cw / 2;
           const y = cy - chh / 2;
           if (j === 0 && demo.current) {
-            // Fit the 402 × 619 mockup inside the card, centred; fade it as the card slides off to the side.
-            const s = (chh * 0.9) / 619;
-            demo.current.style.transform = `translate3d(${x + cw / 2 - 201 * s}px, ${y + chh * 0.05}px, 0) scale(${s})`;
+            // Clip box = the card; inside it the widget sits centred and large (the chat may run past the edges).
+            const box = demo.current;
+            box.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+            box.style.width = `${cw}px`;
+            box.style.height = `${chh}px`;
+            const s = (cw * DEMO_WIDTH) / 402;
+            const inner = box.firstElementChild as HTMLElement | null;
+            // (201, 122) is the widget's centre in the 402 × 619 design box
+            if (inner) inner.style.transform = `translate3d(${cw / 2 - 201 * s}px, ${chh / 2 - 122 * s}px, 0) scale(${s})`;
             const near = clamp(1 - Math.abs(p) * 2.5, 0, 1);
-            demo.current.style.opacity = near.toFixed(3);
-            demo.current.style.visibility = near > 0.01 ? "visible" : "hidden";
+            box.style.opacity = near.toFixed(3);
+            box.style.visibility = near > 0.01 ? "visible" : "hidden";
           }
           const link = links.current[j];
           if (link) {
@@ -381,7 +432,7 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
             link.style.height = `${chh}px`;
           }
           if (x > W + ox + 40 || x + cw < -ox - 40) return;
-          drawCard(drawCtx, j, x, y, cw, chh, hover.current.idx === j ? hover.current.t : 0);
+          drawCard(drawCtx, j, x, y, cw, chh, hover.current.idx === j ? hover.current.t : 0, dpr);
         });
         if (lens) lens.draw(target, focus, 1 - cardY, cw / 2 / W + LENS.flatPad); // GL's y runs bottom-up
         const a = clamp(Math.round(p), 0, n - 1);
@@ -539,7 +590,7 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
         />
       ))}
       <div ref={demo} className="ghome-demo" aria-hidden>
-        <VolatilityDemo playing={active === 0} />
+        <div className="ghome-demo-inner"><VolatilityDemo playing={active === 0} /></div>
       </div>
       <div ref={info} className="ghome-info" aria-live="polite">
         {current && (
