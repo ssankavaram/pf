@@ -29,7 +29,6 @@ const FOCUS_GROW = 1.06;     // cards grow a little as they take focus
 const IMMERSE_GROW = 1.08;   // …and keep growing gently as you scroll through the carousel
 const GAP = 0.05;            // space between cards, × screen width
 const CARD_RATIO = 2172 / 1150; // wide image, like the reference card
-const RADIUS = 12;           // image corner radius (px at full size)
 // The lens: a curved pane of glass fixed to the screen. Cards are flat in the middle and bend as they
 // slide under its edges.
 const LENS = {
@@ -98,47 +97,110 @@ type Props = {
 // Page background per theme (cards are drawn on canvas, so CSS variables can't reach it).
 const MODE = { light: { bg: "#f2f2f2" }, dark: { bg: "#0e0f12" } };
 
-type Media = HTMLImageElement | HTMLVideoElement;
-const ready = (m: Media) => (m instanceof HTMLVideoElement ? m.readyState >= 2 && m.videoWidth > 0 : m.complete && m.naturalWidth > 0);
-const dims = (m: Media) => (m instanceof HTMLVideoElement ? [m.videoWidth, m.videoHeight] : [m.naturalWidth, m.naturalHeight]);
-
-/** Draw media into (x, y, w, h) like object-fit: cover (fit = "cover") or contain. */
-function drawFit(ctx: CanvasRenderingContext2D, m: Media, x: number, y: number, w: number, h: number, fit: "cover" | "contain") {
-  const [sw, sh] = dims(m);
-  const s = fit === "cover" ? Math.max(w / sw, h / sh) : Math.min(w / sw, h / sh);
-  const dw = sw * s;
-  const dh = sh * s;
-  ctx.drawImage(m, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
-}
+// Glass card gradients, one per project (cycled). Each: a base colour, soft colour glows
+// (x, y as fractions of the card; r as a fraction of its width), and the colour of the light rim.
+type Glow = { x: number; y: number; r: number; c: string; solid?: boolean }; // solid: full-strength colour instead of added light
+type Glass = { base: string; glows: Glow[]; rim: string };
+export const GLASS: Glass[] = [
+  { // hot pink core on lavender ("Product & Design")
+    base: "#9f97e8", rim: "rgba(255, 255, 255, 0.95)",
+    glows: [{ x: 0.5, y: 0.38, r: 0.5, c: "rgba(255, 90, 140, 0.85)", solid: true }, { x: 0.5, y: 0.34, r: 0.3, c: "#ff2a4d", solid: true }, { x: 0.5, y: 0.3, r: 0.12, c: "rgba(255, 210, 220, 0.6)" }, { x: 0.5, y: 1.05, r: 0.5, c: "rgba(150, 180, 255, 0.85)" }],
+  },
+  { // deep electric blue ("Engineering")
+    base: "#0b2499", rim: "rgba(180, 205, 255, 0.95)",
+    glows: [{ x: 0.42, y: 0.55, r: 0.55, c: "#1f5bff" }, { x: 0.35, y: 0.5, r: 0.28, c: "rgba(90, 170, 255, 0.85)" }],
+  },
+  { // black with green rising from the bottom
+    base: "#050607", rim: "rgba(170, 255, 200, 0.55)",
+    glows: [{ x: 0.5, y: 1.05, r: 0.62, c: "#2fe07a" }, { x: 0.5, y: 1.12, r: 0.38, c: "rgba(190, 255, 220, 0.9)" }],
+  },
+  { // dark, violet-blue wave along the bottom
+    base: "#08080f", rim: "rgba(190, 180, 255, 0.5)",
+    glows: [{ x: 0.3, y: 1.05, r: 0.55, c: "#5b4bff" }, { x: 0.75, y: 1.05, r: 0.5, c: "#3a7bff" }, { x: 0.5, y: 1.15, r: 0.35, c: "rgba(255, 255, 255, 0.75)" }],
+  },
+  { // dusk with a violet streak toward the top right ("Lumina")
+    base: "#12101a", rim: "rgba(210, 190, 255, 0.45)",
+    glows: [{ x: 0.78, y: 0.18, r: 0.42, c: "rgba(167, 120, 255, 0.95)" }, { x: 0.92, y: 0.05, r: 0.2, c: "rgba(255, 255, 255, 0.7)" }, { x: 0.4, y: 0.55, r: 0.4, c: "rgba(80, 60, 160, 0.45)" }],
+  },
+  { // charcoal with a purple bloom ("Time in bed")
+    base: "#16121e", rim: "rgba(220, 190, 255, 0.45)",
+    glows: [{ x: 0.42, y: 0.3, r: 0.4, c: "#a855f7" }, { x: 0.55, y: 0.38, r: 0.24, c: "rgba(240, 210, 255, 0.85)" }],
+  },
+  { // near-black, white-periwinkle fog below, violet at the edge ("Industry best practices")
+    base: "#0b0b12", rim: "rgba(220, 225, 255, 0.6)",
+    glows: [{ x: 0.5, y: 1.08, r: 0.6, c: "#c7d2fe" }, { x: 1.0, y: 0.45, r: 0.4, c: "rgba(124, 58, 237, 0.85)" }, { x: 0.4, y: 1.15, r: 0.35, c: "rgba(255, 255, 255, 0.9)" }],
+  },
+  { // navy with a blue glow from below ("Hello Robin")
+    base: "#050914", rim: "rgba(150, 190, 255, 0.55)",
+    glows: [{ x: 0.5, y: 1.08, r: 0.6, c: "#1d4ed8" }, { x: 0.5, y: 0.35, r: 0.22, c: "rgba(96, 165, 250, 0.55)" }],
+  },
+  { // lilac-grey dusk ("Sales")
+    base: "#1c1b25", rim: "rgba(220, 215, 255, 0.55)",
+    glows: [{ x: 0.5, y: -0.1, r: 0.7, c: "rgba(140, 138, 180, 0.9)" }, { x: 0.85, y: 0.2, r: 0.25, c: "rgba(255, 255, 255, 0.35)" }],
+  },
+];
 
 /**
- * One card: a wide rounded image. Wide covers fill it; tall covers (phone screens) sit whole in the
- * middle over a soft blurred copy of themselves, so nothing important gets cropped.
+ * One glass card: dark base, colour glows, a soft light rim inside the edges and a thin bright edge.
+ * `glow` (0–1) brightens the rim on hover.
  */
-function drawCard(ctx: CanvasRenderingContext2D, item: GlassItem, media: Media | undefined, x: number, y: number, w: number, h: number, dark: boolean, zoom: number) {
-  const r = RADIUS * (w / 720);
+function drawCard(ctx: CanvasRenderingContext2D, i: number, x: number, y: number, w: number, h: number, glow: number) {
+  const g = GLASS[i % GLASS.length];
+  const r = Math.min(w, h) * 0.12;
+  const k = w / 720;
+
   ctx.save();
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, r);
   ctx.clip();
-  ctx.fillStyle = dark ? "#1b1c21" : "#e6e4e1";
+
+  ctx.fillStyle = g.base;
   ctx.fillRect(x, y, w, h);
-  if (media && ready(media)) {
-    // hover: the image grows a touch inside its frame
-    const zx = x - (w * (zoom - 1)) / 2, zy = y - (h * (zoom - 1)) / 2, zw = w * zoom, zh = h * zoom;
-    if (item.aspect < 1.3) {
-      ctx.filter = "blur(28px) saturate(120%)";
-      drawFit(ctx, media, zx - 40, zy - 40, zw + 80, zh + 80, "cover");
-      ctx.filter = "none";
-      ctx.fillStyle = dark ? "rgba(0, 0, 0, 0.15)" : "rgba(255, 255, 255, 0.12)";
-      ctx.fillRect(x, y, w, h);
-      drawFit(ctx, media, zx + zw * 0.04, zy + zh * 0.06, zw * 0.92, zh * 0.88, "contain");
-    } else {
-      drawFit(ctx, media, zx, zy, zw, zh, "cover");
-    }
+  ctx.globalCompositeOperation = "screen"; // glows add light, like light through glass, instead of muddying
+  for (const o of g.glows) {
+    ctx.globalCompositeOperation = o.solid ? "source-over" : "screen";
+    const cx = x + o.x * w, cy = y + o.y * h, rr = o.r * w;
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rr);
+    grad.addColorStop(0, o.c);
+    grad.addColorStop(1, "rgba(0, 0, 0, 0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(x, y, w, h);
   }
+  ctx.globalCompositeOperation = "source-over";
+
+  // Light rim: a glow cast inward from just outside the edge (classic inner-shadow trick).
+  ctx.beginPath();
+  ctx.rect(x - 200, y - 200, w + 400, h + 400);
+  ctx.roundRect(x, y, w, h, r);
+  ctx.shadowColor = g.rim;
+  ctx.shadowBlur = (40 + 24 * glow) * k;
+  ctx.fillStyle = "#000";
+  ctx.fill("evenodd");
+  ctx.fill("evenodd"); // twice: a stronger, lighter edge
+  ctx.shadowColor = "transparent";
+
+  // A soft sheen across the top, like light catching glass
+  const sheen = ctx.createLinearGradient(x, y, x, y + h * 0.45);
+  sheen.addColorStop(0, `rgba(255, 255, 255, ${0.14 + 0.08 * glow})`);
+  sheen.addColorStop(1, "rgba(255, 255, 255, 0)");
+  ctx.fillStyle = sheen;
+  ctx.fillRect(x, y, w, h);
   ctx.restore();
+
+  // Thin bright edge
+  ctx.beginPath();
+  ctx.roundRect(x + 0.75, y + 0.75, w - 1.5, h - 1.5, r);
+  ctx.strokeStyle = `rgba(255, 255, 255, ${0.28 + 0.2 * glow})`;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
 }
+
+/** Same look as CSS, for the reduced-motion fallback. */
+export const glassCss = (i: number) => {
+  const g = GLASS[i % GLASS.length];
+  const glows = g.glows.map((o) => `radial-gradient(circle at ${o.x * 100}% ${o.y * 100}%, ${o.c}, transparent ${o.r * 140}%)`);
+  return { background: [...glows, g.base].join(", "), boxShadow: `inset 0 0 40px ${g.rim}, inset 0 0 0 1.5px rgba(255, 255, 255, 0.28)` };
+};
 
 // ---- WebGL lens ------------------------------------------------------------
 function makeLens(canvas: HTMLCanvasElement) {
@@ -234,21 +296,6 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
       const drawCtx = lens ? ctx2d : out.getContext("2d")!;
       const target = lens ? src : out;
 
-      // Covers: images, or muted looping videos.
-      const media: Media[] = items.map((p) => {
-        if (p.isVideo) {
-          const v = document.createElement("video");
-          Object.assign(v, { muted: true, loop: true, playsInline: true, autoplay: true, crossOrigin: "anonymous", preload: "auto" });
-          v.src = p.cover;
-          v.play().catch(() => {});
-          return v;
-        }
-        const im = new Image();
-        im.crossOrigin = "anonymous";
-        im.src = p.cover;
-        return im;
-      });
-
       let W = 0, H = 0, dpr = 1, cardW = 0, cardH = 0;
       const size = () => {
         W = el.clientWidth;
@@ -307,8 +354,7 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
             link.style.height = `${chh}px`;
           }
           if (x > W + ox + 40 || x + cw < -ox - 40) return;
-          const zoom = 1 + 0.035 * (hover.current.idx === j ? hover.current.t : 0);
-          drawCard(drawCtx, item, media[j], x, y, cw, chh, dark, zoom);
+          drawCard(drawCtx, j, x, y, cw, chh, hover.current.idx === j ? hover.current.t : 0);
         });
         if (lens) lens.draw(target, focus, 1 - cardY, cw / 2 / W + LENS.flatPad); // GL's y runs bottom-up
         const a = clamp(Math.round(p), 0, n - 1);
@@ -366,7 +412,6 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
         delete document.documentElement.dataset.navHidden;
         ro.disconnect();
         io.disconnect();
-        media.forEach((m) => { if (m instanceof HTMLVideoElement) { m.pause(); m.removeAttribute("src"); m.load(); } });
       };
     });
     mm.add("(prefers-reduced-motion: reduce)", () => { setReduced(true); });
@@ -393,7 +438,7 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
     return () => ctx.revert();
   }, [active, reduced]);
 
-  // Hovering the centred card: the image grows a touch inside its frame.
+  // Hovering the centred card: its light rim brightens.
   const zoomIn = (i: number) => {
     if (reduced || i !== activeRef.current) return;
     hover.current.idx = i;
@@ -435,14 +480,9 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
       <section id="top" className="ghome is-static" aria-label="Selected work">
         {introBlock}
         <div className="ghome-stage">
-          {items.map((p) => (
+          {items.map((p, i) => (
             <Link key={p.slug} href={`/${p.slug}`} className="pcard" aria-label={`Open ${p.title}`}>
-              <div className="pcard-media">
-                {p.isVideo ? <video src={`${p.cover}#t=0.001`} muted playsInline preload="metadata" /> : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.cover} alt="" />
-                )}
-              </div>
+              <div className="pcard-media" style={glassCss(i)} />
               <div className="ghome-info-inner">{details(p)}</div>
             </Link>
           ))}
