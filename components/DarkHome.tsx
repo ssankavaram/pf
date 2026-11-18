@@ -20,7 +20,7 @@ export type HomeItem = {
 /* ---- Tuning knobs ------------------------------------------------------- */
 const INTRO_SCROLL = 0.6;     // screen-heights of scrolling to clear the nav + intro and bring the cards to centre
 const SCROLL_PER_CARD = 0.8;  // screen-heights of scrolling to move one card
-const CARD_RATIO = 763 / 437; // design card (Figma node 61:2831)
+const CARD_RATIO = 780 / 437; // design cards (Figma node 64:4687)
 const FRAME = 12;             // frame margin around the glass on the focused card (px at design size)
 const CARD_TOP_GAP = 48;      // space between the intro and the card at the start (px; card bottom may be cut off)
 const CARD_Y_FOCUS = 0.42;    // card centre once the intro has cleared (room for the caption below)
@@ -39,7 +39,7 @@ const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
  * #373636 margin, stroke and smaller inner radius used for the focused card.
  */
 function drawCard(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number, frame: number, cover?: HTMLImageElement) {
-  const k = w / 763;
+  const k = w / 780;
   if (frame > 0.01) {
     ctx.save();
     ctx.globalAlpha = frame;
