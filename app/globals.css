@@ -445,6 +445,38 @@ a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
 .pcard-media { aspect-ratio: 2172 / 1150; border-radius: 12px; overflow: hidden; background: var(--paper-2); }
 .pcard-media img, .pcard-media video { display: block; width: 100%; height: 100%; object-fit: cover; }
 
+/* Product moment on the first card ("Big picture → Volatility explained", from Figma).
+   402 × 619 design box, scaled by GlassHome to fit the card; transparent background. */
+.ghome-demo { position: absolute; left: 0; top: 0; z-index: 2; transform-origin: 0 0; pointer-events: none; will-change: transform, opacity; }
+.vd { position: relative; width: 402px; height: 619px; font-family: var(--font-inter), "Inter", system-ui, sans-serif; color: #373737; -webkit-font-smoothing: antialiased; }
+.vd-widget { position: absolute; left: 0; top: 37px; width: 402px; padding: 0 24px; display: flex; flex-direction: column; gap: 16px; }
+.vd-card {
+  display: flex; flex-direction: column; gap: 10px; padding: 24px; border: 1px solid #e4e7ef; border-radius: 12px;
+  background: radial-gradient(70% 90% at 115% 113%, rgba(91, 143, 249, 0.19), transparent 70%), #fff;
+}
+.vd-row { display: flex; justify-content: space-between; align-items: center; }
+.vd-label { display: flex; align-items: center; gap: 10px; font-size: 12px; line-height: normal; color: #373737; }
+.vd-label.is-lg { gap: 11px; }
+.vd-close { display: grid; place-items: center; width: 20px; height: 20px; }
+.vd-q { font-size: 14px; font-weight: 500; line-height: 21px; color: #1f1f1f; }
+.vd-chips { display: flex; gap: 16px; overflow: hidden; }
+.vd-chip { flex: none; padding: 8px; border: 1px solid #e4e7ef; border-radius: 12px; background: #fff; font-size: 12px; line-height: normal; color: #373737; white-space: nowrap; }
+.vd-chip.is-primary { background: #5b8ff9; color: #fff; }
+.vd-chip.is-faint { background: rgba(255, 255, 255, 0.24); color: #000; }
+.vd-chat { position: absolute; left: 0; top: 0; width: 402px; height: 619px; padding: 16px 0; overflow: hidden; border-radius: 12px; background: #fff; }
+.vd-content { display: flex; flex-direction: column; gap: 16px; padding: 0 24px; }
+.vd-head { display: flex; flex-direction: column; gap: 8px; width: 349px; }
+.vd-title { font-size: 16px; font-weight: 500; line-height: 21px; color: #1f1f1f; }
+.vd-text { font-size: 12px; line-height: 21px; color: #373737; }
+.vd-divider { height: 1px; width: 363px; background: #e4e7ef; margin-left: auto; }
+.vd-stats { display: flex; gap: 77px; }
+.vd-stat { display: flex; flex-direction: column; gap: 8px; }
+.vd-stat span { font-size: 12px; line-height: normal; }
+.vd-stat b { font-size: 24px; font-weight: 400; line-height: normal; }
+.vd-chart { position: absolute; left: 48px; top: 282px; width: 306.65px; height: 301.4px; }
+.vd-ripple { position: absolute; left: 218px; top: 98px; width: 28px; height: 28px; }
+.vd-cursor { position: absolute; left: 230.25px; top: 110.25px; width: 21.5px; height: 31.5px; }
+
 /* Flat glass cards (reduced-motion fallback) */
 .ghome-stage { position: relative; z-index: 1; flex: 1; min-height: 0; perspective: 1400px; perspective-origin: 44.5% 50%; }
 .gcard {

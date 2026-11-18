@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { DUR, EASE, SCRUB, STAGGER, scrollToY } from "@/lib/motion";
+import VolatilityDemo from "./VolatilityDemo";
 
 export type GlassItem = {
   slug: string;
@@ -280,6 +281,7 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const intro = useRef<HTMLDivElement>(null);
   const info = useRef<HTMLDivElement>(null);
+  const demo = useRef<HTMLDivElement>(null); // product animation over the first card
   const links = useRef<(HTMLAnchorElement | null)[]>([]);
   const trigger = useRef<ScrollTrigger | null>(null);
   const activeRef = useRef(0);
@@ -364,6 +366,14 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
           const xc = focus * W + (j - p) * spacing;
           const x = xc - cw / 2;
           const y = cy - chh / 2;
+          if (j === 0 && demo.current) {
+            // Fit the 402 × 619 mockup inside the card, centred; fade it as the card slides off to the side.
+            const s = (chh * 0.9) / 619;
+            demo.current.style.transform = `translate3d(${x + cw / 2 - 201 * s}px, ${y + chh * 0.05}px, 0) scale(${s})`;
+            const near = clamp(1 - Math.abs(p) * 2.5, 0, 1);
+            demo.current.style.opacity = near.toFixed(3);
+            demo.current.style.visibility = near > 0.01 ? "visible" : "hidden";
+          }
           const link = links.current[j];
           if (link) {
             link.style.transform = `translate3d(${x}px, ${y}px, 0)`;
@@ -528,6 +538,9 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
           onMouseLeave={zoomOut}
         />
       ))}
+      <div ref={demo} className="ghome-demo" aria-hidden>
+        <VolatilityDemo playing={active === 0} />
+      </div>
       <div ref={info} className="ghome-info" aria-live="polite">
         {current && (
           <Link key={current.slug} href={`/${current.slug}`} className="ghome-info-inner">

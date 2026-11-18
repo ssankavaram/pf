@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Instrument_Serif, La_Belle_Aurore } from "next/font/google";
+import { Instrument_Serif, La_Belle_Aurore, Inter } from "next/font/google";
 import { site, asset } from "@/lib/content";
 import SmoothScroll from "@/components/SmoothScroll";
 import "lenis/dist/lenis.css";
@@ -20,6 +20,9 @@ const script = La_Belle_Aurore({
   variable: "--font-script",
 });
 
+// Inter: only for the product mockup animation (matches the Figma file it came from).
+const inter = Inter({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-inter" });
+
 export const metadata: Metadata = {
   title: site.title,
   description: site.bio,
@@ -28,7 +31,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${display.variable} ${script.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${display.variable} ${script.variable} ${inter.variable}`} suppressHydrationWarning>
       <head>
         {/* Set light/dark before first paint so the page never flashes the wrong theme */}
         <script
