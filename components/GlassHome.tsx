@@ -99,12 +99,21 @@ const MODE = { light: { bg: "#f2f2f2" }, dark: { bg: "#0e0f12" } };
 
 // Glass card gradients, one per project (cycled). Each: a base colour, soft colour glows
 // (x, y as fractions of the card; r as a fraction of its width), and the colour of the light rim.
-type Glow = { x: number; y: number; r: number; c: string; solid?: boolean }; // solid: full-strength colour instead of added light
-type Glass = { base: string; glows: Glow[]; rim: string };
+type Glow = { x: number; y: number; r: number; c: string; solid?: boolean; sy?: number }; // solid: full-strength colour instead of added light; sy: squash into a wide oval
+type Glass = { base: string; glows: Glow[]; rim: string; sheen?: number }; // sheen: light across the top (default 0.14)
 export const GLASS: Glass[] = [
-  { // hot pink core on lavender ("Product & Design")
-    base: "#9f97e8", rim: "rgba(255, 255, 255, 0.95)",
-    glows: [{ x: 0.5, y: 0.38, r: 0.5, c: "rgba(255, 90, 140, 0.85)", solid: true }, { x: 0.5, y: 0.34, r: 0.3, c: "#ff2a4d", solid: true }, { x: 0.5, y: 0.3, r: 0.12, c: "rgba(255, 210, 220, 0.6)" }, { x: 0.5, y: 1.05, r: 0.5, c: "rgba(150, 180, 255, 0.85)" }],
+  { // "Industry best practices": black top-left, violet-blue from the right, blue band + white fog along the bottom, teal corner
+    base: "#05050a", rim: "rgba(200, 210, 255, 0.32)", sheen: 0.02,
+    glows: [
+      { x: 1.02, y: 0.4, r: 0.42, sy: 0.9, c: "rgba(112, 58, 255, 1)" },
+      { x: 0.86, y: 0.58, r: 0.34, sy: 0.8, c: "rgba(64, 80, 255, 0.85)" },
+      { x: 0.5, y: 0.86, r: 0.62, sy: 0.42, c: "rgba(40, 78, 245, 1)" },
+      { x: 0.5, y: 0.96, r: 0.7, sy: 0.32, c: "rgba(70, 110, 255, 0.95)" },
+      { x: 0.6, y: 1.02, r: 0.5, sy: 0.3, c: "rgba(236, 232, 255, 1)" },
+      { x: 0.88, y: 0.98, r: 0.26, sy: 0.55, c: "rgba(255, 205, 240, 0.95)" },
+      { x: 0.02, y: 0.98, r: 0.24, sy: 0.9, c: "rgba(56, 228, 200, 0.95)" },
+      { x: 0.24, y: 1.04, r: 0.26, sy: 0.45, c: "rgba(255, 255, 255, 0.95)" },
+    ],
   },
   { // deep electric blue ("Engineering")
     base: "#0b2499", rim: "rgba(180, 205, 255, 0.95)",
@@ -117,6 +126,10 @@ export const GLASS: Glass[] = [
   { // dark, violet-blue wave along the bottom
     base: "#08080f", rim: "rgba(190, 180, 255, 0.5)",
     glows: [{ x: 0.3, y: 1.05, r: 0.55, c: "#5b4bff" }, { x: 0.75, y: 1.05, r: 0.5, c: "#3a7bff" }, { x: 0.5, y: 1.15, r: 0.35, c: "rgba(255, 255, 255, 0.75)" }],
+  },
+  { // hot pink core on lavender ("Product & Design")
+    base: "#9f97e8", rim: "rgba(255, 255, 255, 0.95)",
+    glows: [{ x: 0.5, y: 0.38, r: 0.5, c: "rgba(255, 90, 140, 0.85)", solid: true }, { x: 0.5, y: 0.34, r: 0.3, c: "#ff2a4d", solid: true }, { x: 0.5, y: 0.3, r: 0.12, c: "rgba(255, 210, 220, 0.6)" }, { x: 0.5, y: 1.05, r: 0.5, c: "rgba(150, 180, 255, 0.85)" }],
   },
   { // dusk with a violet streak toward the top right ("Lumina")
     base: "#12101a", rim: "rgba(210, 190, 255, 0.45)",
@@ -159,12 +172,16 @@ function drawCard(ctx: CanvasRenderingContext2D, i: number, x: number, y: number
   ctx.globalCompositeOperation = "screen"; // glows add light, like light through glass, instead of muddying
   for (const o of g.glows) {
     ctx.globalCompositeOperation = o.solid ? "source-over" : "screen";
-    const cx = x + o.x * w, cy = y + o.y * h, rr = o.r * w;
-    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rr);
+    const cx = x + o.x * w, cy = y + o.y * h, rr = o.r * w, sy = o.sy ?? 1;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(1, sy); // squash the circle into an oval
+    const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, rr);
     grad.addColorStop(0, o.c);
     grad.addColorStop(1, "rgba(0, 0, 0, 0)");
     ctx.fillStyle = grad;
-    ctx.fillRect(x, y, w, h);
+    ctx.fillRect(x - cx, (y - cy) / sy, w, h / sy);
+    ctx.restore();
   }
   ctx.globalCompositeOperation = "source-over";
 
@@ -181,7 +198,7 @@ function drawCard(ctx: CanvasRenderingContext2D, i: number, x: number, y: number
 
   // A soft sheen across the top, like light catching glass
   const sheen = ctx.createLinearGradient(x, y, x, y + h * 0.45);
-  sheen.addColorStop(0, `rgba(255, 255, 255, ${0.14 + 0.08 * glow})`);
+  sheen.addColorStop(0, `rgba(255, 255, 255, ${(g.sheen ?? 0.14) + 0.08 * glow})`);
   sheen.addColorStop(1, "rgba(255, 255, 255, 0)");
   ctx.fillStyle = sheen;
   ctx.fillRect(x, y, w, h);
