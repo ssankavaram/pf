@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import TopNav from "@/components/TopNav";
+import GlassNav from "@/components/GlassNav";
+import GlassDock from "@/components/GlassDock";
 import About from "@/components/About";
 import Footer from "@/components/Footer";
-import { site, moreLinks } from "@/lib/content";
+import { site } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: `About · ${site.name}`,
@@ -12,7 +13,8 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <>
-      <TopNav name={site.name} more={moreLinks()} />
+      <GlassNav />
+      <GlassDock nav={site.nav} />
       <main className="page">
         <About title={site.about.title} bio={site.bio} />
       </main>

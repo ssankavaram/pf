@@ -7,6 +7,7 @@ export const EASE = {
   out: "expo.out",        // things arriving or responding: fast start, long soft landing
   inOut: "power3.inOut",  // things travelling from A to B
   spring: "back.out(1.6)", // small playful pops (stickers, highlights)
+  drift: "sine.inOut",     // slow ambient floating (background glow)
 } as const;
 
 export const DUR = {

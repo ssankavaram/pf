@@ -8,7 +8,13 @@
    One palette, taken from the doodles. Change a colour here and it changes everywhere. */
 :root {
   /* Neutrals: warm paper + warm ink */
-  --paper: #ffffff;     /* page background */
+  --paper: #f2f2f2;     /* page background */
+  --mist: #ebeae9;      /* footer / quiet surfaces */
+  /* Glass */
+  --glass-fill: rgba(255, 255, 255, 0.46);
+  --glass-edge: rgba(255, 255, 255, 0.9);
+  --glass-blur: blur(18px) saturate(150%);
+  --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 18px 40px -18px rgba(70, 80, 120, 0.28);
   --paper-2: #e9e9e9;   /* placeholders */
   --card: rgba(0, 0, 0, 0.07); /* grey behind project covers */
   --ink: #241a16;
@@ -187,18 +193,20 @@ a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
 .mp-me { opacity: 0; z-index: 3; transition: opacity 0.15s; }
 
 /* Footer, revealed from underneath */
-.footer { position: sticky; bottom: 0; z-index: 0; background: var(--dark); }
+.footer { position: sticky; bottom: 0; z-index: 0; background: var(--mist); }
 .footer-panel {
   position: relative; overflow: hidden; display: flex; flex-direction: column;
-  height: clamp(440px, 60svh, 600px); padding: 24px 32px; color: var(--cream);
+  height: clamp(440px, 60svh, 600px); padding: 24px 32px; color: var(--ink);
 }
-.footer-top { display: flex; justify-content: space-between; gap: 16px; color: var(--muted-on-dark); }
+.footer-top { display: flex; justify-content: space-between; gap: 16px; color: var(--muted); }
 .footer-cols { position: relative; z-index: 2; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 48px; }
-.footer-pill { display: inline-block; margin-bottom: 14px; padding: 4px 12px; border-radius: 999px; background: var(--cream); color: var(--ink); font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
+.footer-pill { display: inline-block; margin-bottom: 14px; padding: 4px 12px; border-radius: 999px; background: var(--glass-fill); border: 1px solid var(--glass-edge); color: var(--ink); font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
 .footer-big { display: inline-block; font-family: var(--heading); font-size: clamp(22px, 1.95vw, 28px); font-weight: 400; line-height: 1.2; }
 .footer-links li + li { margin-top: 2px; }
 .footer-mark { position: absolute; inset: 0; pointer-events: none; }
-.footer-word { position: absolute; left: 5.8%; top: 41%; font-family: var(--script); font-weight: 400; font-size: 44vw; line-height: 0.75; letter-spacing: -0.03em; color: var(--cream); white-space: nowrap; }
+.footer-word { position: absolute; left: 5.8%; top: 41%; font-family: var(--script); font-weight: 400; font-size: 44vw; line-height: 0.75; letter-spacing: -0.03em; white-space: nowrap;
+  /* iridescent wordmark, same pastels as the glass glows */
+  background: linear-gradient(100deg, #f7a8d8 10%, #c3b1ff 35%, #a9c1ff 55%, #b9f0d4 80%); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .footer-mark .sticker { pointer-events: auto; }
 .sticker {
   position: absolute; width: clamp(48px, 7vw, 100px); aspect-ratio: 1; transform: rotate(var(--r));
@@ -320,6 +328,105 @@ a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
   .about { grid-template-columns: 1fr; padding-top: 104px; }
   .about-text { gap: 20px; }
   .about-icon img { width: 19vw; height: 19vw; }
+}
+
+
+/* ================= Glass home ================= */
+/* Shared glass surfaces */
+.glass-pill, .glass-circle {
+  background: var(--glass-fill); border: 1px solid var(--glass-edge);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); box-shadow: var(--glass-shadow);
+  transition: transform var(--dur-base) var(--ease-spring), background var(--dur-fast) var(--ease-out);
+}
+.glass-pill:hover, .glass-circle:hover { background: rgba(255, 255, 255, 0.72); transform: translateY(-2px); }
+.glass-pill:active, .glass-circle:active { transform: scale(0.96); }
+
+/* Nav: pills top right */
+.gnav { position: fixed; z-index: 100; top: calc(32px + env(safe-area-inset-top, 0px)); right: var(--gutter); display: flex; gap: 12px; }
+.glass-pill { position: relative; display: inline-flex; align-items: center; min-height: 40px; padding: 8px 14px; border-radius: 999px; font-size: 15px; line-height: 1.4; color: var(--ink); }
+.glass-pill[aria-current="page"] { background: rgba(255, 255, 255, 0.85); }
+.glass-pill.is-soon { cursor: default; }
+.soon-badge {
+  position: absolute; top: -10px; right: -6px; padding: 1px 7px; border-radius: 999px; background: var(--ink); color: #fff;
+  font-size: 10px; letter-spacing: 0.04em; opacity: 0; transform: translateY(4px) scale(0.9);
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-base) var(--ease-spring);
+}
+.glass-pill.is-soon:hover .soon-badge, .glass-pill.is-soon:focus-visible .soon-badge { opacity: 1; transform: none; }
+
+/* Dock: circles bottom right */
+.gdock { position: fixed; z-index: 100; right: var(--gutter); bottom: calc(56px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 24px; }
+.glass-circle { position: relative; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; }
+.glass-circle img { width: 22px; height: 22px; }
+.glass-tip {
+  position: absolute; right: calc(100% + 10px); top: 50%; padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+  background: var(--glass-fill); border: 1px solid var(--glass-edge); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  font-size: 13px; color: var(--ink); opacity: 0; transform: translate(6px, -50%); pointer-events: none;
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-base) var(--ease-out);
+}
+.glass-circle:hover .glass-tip, .glass-circle:focus-visible .glass-tip { opacity: 1; transform: translate(0, -50%); }
+
+/* Section */
+.ghome {
+  --card-w: min(615px, 42.7vw, calc(41svh * 1.662));
+  position: relative; height: 100svh; overflow: hidden; background: var(--bg);
+  display: flex; flex-direction: column;
+}
+.ghome-blobs { position: absolute; inset: 0; pointer-events: none; }
+.ghome-blob-wrap { position: absolute; inset: 0; will-change: transform; }
+.ghome-blob { position: absolute; border-radius: 50%; transform: translate(-50%, -50%); filter: blur(70px); opacity: 0.55; will-change: transform; }
+.ghome-intro {
+  position: relative; z-index: 2; width: min(615px, calc(100% - 2 * var(--gutter)));
+  margin-left: max(var(--gutter), calc(44.5vw - var(--card-w) / 2)); padding-top: clamp(96px, 15svh, 136px);
+}
+.ghome-name { font-family: var(--heading); font-weight: 400; font-size: clamp(22px, 1.95vw, 28px); line-height: 1.12; letter-spacing: -0.01em; color: var(--ink); }
+.ghome-bio { margin-top: 12px; font-size: 16px; line-height: 1.6; color: var(--ink); }
+.ghome-currently { margin-top: 12px; font-size: 15px; line-height: 1.4; color: var(--muted); }
+
+/* Carousel: cards on the inside of a cylinder */
+.ghome-stage { position: relative; z-index: 1; flex: 1; min-height: 0; perspective: 1400px; perspective-origin: 44.5% 50%; }
+.gcard {
+  position: absolute; left: 0; top: 50%; width: var(--card-w); aspect-ratio: 615 / 370;
+  transform-style: preserve-3d; will-change: transform, opacity; cursor: pointer;
+}
+.gcard-glass {
+  position: relative; width: 100%; height: 100%; border-radius: 16px; overflow: hidden;
+  background:
+    radial-gradient(70% 90% at 88% 22%, color-mix(in srgb, var(--tint) 42%, transparent), transparent 70%),
+    radial-gradient(60% 70% at 10% 100%, color-mix(in srgb, var(--tint) 16%, transparent), transparent 70%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.3));
+  border: 1px solid var(--glass-edge);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow), 0 40px 80px -40px color-mix(in srgb, var(--tint) 45%, transparent);
+}
+.gcard-title { position: absolute; left: 5.2%; top: 50%; transform: translateY(-50%); width: 40%; font-size: 16px; line-height: 1.6; color: var(--ink); }
+.gcard-cover { position: absolute; overflow: hidden; background: var(--paper-2); box-shadow: 0 20px 40px -20px rgba(40, 40, 70, 0.35); transition: transform var(--dur-slow) var(--ease-out); }
+.gcard-cover.is-portrait { right: 6.5%; top: 30%; height: 118%; width: auto; border-radius: 36px; }
+.gcard-cover.is-landscape { right: -4%; top: 24%; width: 58%; height: auto; border-radius: 14px; }
+.gcard-cover img, .gcard-cover video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.gcard.is-active:hover .gcard-cover { transform: translateY(-10px); }
+/* Light that sweeps across the glass as the card turns (--sheen is set from its angle) */
+.gcard-sheen {
+  position: absolute; inset: 0; pointer-events: none; mix-blend-mode: soft-light;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.9) 46%, rgba(255, 240, 250, 0.4) 52%, transparent 66%);
+  background-size: 260% 100%; background-position: var(--sheen, 50%) 0;
+}
+.gcard:focus-visible { outline: none; }
+.gcard:focus-visible .gcard-glass { outline: 2px solid var(--ink); outline-offset: 4px; }
+
+/* Reduced motion: a plain horizontal row you scroll sideways */
+.ghome.is-static { height: auto; min-height: 100svh; }
+.ghome.is-static .ghome-stage { display: flex; gap: 24px; overflow-x: auto; padding: 48px var(--gutter); perspective: none; }
+.ghome.is-static .gcard { position: relative; top: auto; flex: none; }
+
+@media (max-width: 809px) {
+  .ghome { --card-w: 84vw; }
+  .ghome-intro { margin-left: var(--gutter); }
+  .gnav { top: 16px; left: var(--gutter); right: auto; gap: 8px; }
+  .glass-pill { font-size: 14px; padding: 6px 12px; }
+  .gdock { flex-direction: row; gap: 12px; bottom: 16px; }
+  .glass-circle { width: 48px; height: 48px; }
+  .glass-tip { display: none; }
+  .gcard-title { font-size: 14px; width: 46%; }
 }
 
 /* ================= Case study ================= */
