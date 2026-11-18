@@ -430,16 +430,20 @@ a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
 .ghome-hit { position: absolute; left: 0; top: 0; z-index: 3; border-radius: 16px; will-change: transform; }
 .ghome-hit:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
 
-/* Case study text under the centred card (position + fade set from scroll; content animates in per project) */
-.ghome-info { position: absolute; z-index: 4; left: 50%; transform: translateX(-50%); width: min(560px, calc(100% - 2 * var(--gutter))); text-align: center; visibility: hidden; }
-.ghome-info-inner { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.ghome-info-title { font-family: var(--heading); font-size: clamp(18px, 1.5vw, 21px); line-height: 1.3; letter-spacing: -0.01em; color: var(--ink); }
-.ghome-info-desc { font-size: 15px; line-height: 1.5; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.ghome-info-tags { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 2px; }
-.ghome-info-tags li { padding: 3px 10px; border-radius: 999px; font-size: 12px; line-height: 1.4; color: var(--ink);
-  background: var(--glass-fill); border: 1px solid var(--glass-edge); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
-.ghome-info-cta { margin-top: 2px; font-size: 14px; color: var(--ink); }
-@media (max-width: 809px) { .ghome-info-desc { display: none; } }
+/* Text under the centred card: name left, tags spread right, one line below (position + fade set from scroll) */
+.ghome-info { position: absolute; z-index: 4; left: 0; top: 0; visibility: hidden; }
+.ghome-info-inner { display: flex; flex-direction: column; gap: 10px; padding: 0 2px; color: var(--ink); }
+.ghome-info-row { display: flex; justify-content: space-between; align-items: baseline; gap: 24px; }
+.ghome-info-name { font-family: var(--heading); font-size: clamp(15px, 1.2vw, 17px); font-weight: 500; letter-spacing: -0.01em; }
+.ghome-info-tags { display: flex; gap: clamp(14px, 1.7vw, 24px); flex-wrap: wrap; justify-content: flex-end; }
+.ghome-info-tags li { font-size: clamp(14px, 1.15vw, 16px); color: var(--muted); white-space: nowrap; }
+.ghome-info-desc { font-size: clamp(15px, 1.2vw, 17px); line-height: 1.4; letter-spacing: -0.01em; }
+@media (max-width: 809px) { .ghome-info-tags { display: none; } }
+
+/* Reduced motion: plain cards in a sideways row */
+.pcard { flex: none; width: min(560px, 82vw); display: flex; flex-direction: column; gap: 18px; }
+.pcard-media { aspect-ratio: 2172 / 1150; border-radius: 12px; overflow: hidden; background: var(--paper-2); }
+.pcard-media img, .pcard-media video { display: block; width: 100%; height: 100%; object-fit: cover; }
 
 /* Flat glass cards (reduced-motion fallback) */
 .ghome-stage { position: relative; z-index: 1; flex: 1; min-height: 0; perspective: 1400px; perspective-origin: 44.5% 50%; }

@@ -24,11 +24,12 @@ const INTRO_SCROLL = 0.6;    // screen-heights of scrolling to clear the nav + i
 const SCROLL_PER_CARD = 0.8; // screen-heights of scrolling to move one card
 const FOCUS_X = 0.5;         // where the focused card's centre sits, × screen width
 const CARD_Y = 0.63;         // card centre at the start, × section height (below the intro)
-const CARD_Y_FOCUS = 0.4;    // card centre once the intro has cleared (leaves room for the text below)
+const CARD_Y_FOCUS = 0.42;   // image centre once the intro has cleared (leaves room for the text below)
 const FOCUS_GROW = 1.06;     // cards grow a little as they take focus
 const IMMERSE_GROW = 1.08;   // …and keep growing gently as you scroll through the carousel
-const GAP = 0.09;            // space between cards, × screen width
-const CARD_RATIO = 310 / 392; // portrait, like the reference cards
+const GAP = 0.05;            // space between cards, × screen width
+const CARD_RATIO = 2172 / 1150; // wide image, like the reference card
+const RADIUS = 12;           // image corner radius (px at full size)
 // The lens: a curved pane of glass fixed to the screen. Cards are flat in the middle and bend as they
 // slide under its edges.
 const LENS = {
@@ -41,7 +42,6 @@ const LENS = {
   haze: 0.35,     // milky glow at the far edges
   overscan: 0.18, // cards are drawn this far past each screen edge (× width) so the lens always has content to bend in
 };
-const TINTS = ["#5183f5", "#f58bd0", "#7fd9a8", "#a78bfa", "#ffb86b"];
 /* ------------------------------------------------------------------------ */
 
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
@@ -95,249 +95,49 @@ type Props = {
 };
 
 // ---- Canvas drawing --------------------------------------------------------
-// Card looks, cycled per project: soft mesh gradients like the reference video.
-// Each colour stop has a light value and (optionally) a dark-mode value.
-type Stop = [number, string, string?];
-type Layer = { kind: "radial"; x: number; y: number; r: number; stops: Stop[] } | { kind: "linear"; x0: number; y0: number; x1: number; y1: number; stops: Stop[] };
-type Theme = { base: [string, string]; layers: Layer[]; chart: boolean };
-const THEMES: Theme[] = [
-  { // teal core, green, peach edges
-    base: ["#f5d3c4", "#15181a"], chart: true,
-    layers: [{ kind: "radial", x: 0.5, y: 0.5, r: 0.75, stops: [[0, "#12b3a6"], [0.32, "#6fd0a4", "#3aa889"], [0.62, "#c6e3a6", "#2c5a48"], [0.85, "#f4cdb8", "#1d2a26"], [1, "#f5d3c4", "#15181a"]] }],
-  },
-  { // magenta top fading to white
-    base: ["#f6f4f8", "#16151b"], chart: true,
-    layers: [
-      { kind: "linear", x0: 0.5, y0: 0, x1: 0.5, y1: 0.75, stops: [[0, "#b46af5"], [0.35, "#ec86dc", "#b8509f"], [0.7, "#f6eef7", "#2a1d2c"], [1, "#f6f4f8", "#16151b"]] },
-      { kind: "radial", x: 0.5, y: 0.22, r: 0.45, stops: [[0, "rgba(120, 90, 255, 0.55)"], [1, "rgba(120, 90, 255, 0)"]] },
-    ],
-  },
-  { // white with a pink-and-blue blob
-    base: ["#f6f6f8", "#141519"], chart: false,
-    layers: [{ kind: "radial", x: 0.5, y: 0.42, r: 0.36, stops: [[0, "#2f63f4"], [0.38, "#6f8ff8"], [0.62, "#f39ac4", "#c0558a"], [0.82, "rgba(247, 186, 214, 0.35)", "rgba(160, 60, 110, 0.25)"], [1, "rgba(246, 246, 248, 0)", "rgba(20, 21, 25, 0)"]] }],
-  },
-  { // violet-blue core
-    base: ["#efe8fb", "#15131d"], chart: true,
-    layers: [{ kind: "radial", x: 0.5, y: 0.48, r: 0.72, stops: [[0, "#2f45f2"], [0.38, "#6b5cf5"], [0.68, "#d48bef", "#7a3f9e"], [1, "#efe8fb", "#15131d"]] }],
-  },
-  { // sky: violet to blue to mist
-    base: ["#e4ebfa", "#12151c"], chart: true,
-    layers: [
-      { kind: "linear", x0: 0.1, y0: 0, x1: 0.9, y1: 1, stops: [[0, "#8b7cf6"], [0.4, "#5a8ef7", "#3f6fd8"], [1, "#d8e3fb", "#1a2233"]] },
-      { kind: "radial", x: 0.85, y: 0.15, r: 0.5, stops: [[0, "rgba(255, 255, 255, 0.55)", "rgba(255, 255, 255, 0.12)"], [1, "rgba(255, 255, 255, 0)"]] },
-    ],
-  },
-];
+// Page background per theme (cards are drawn on canvas, so CSS variables can't reach it).
+const MODE = { light: { bg: "#f2f2f2" }, dark: { bg: "#0e0f12" } };
 
-// Colours that depend on light/dark mode (cards are drawn on canvas, so CSS variables can't reach them).
-const MODE = {
-  light: { bg: "#f2f2f2", ink: "#2b2b30", pill: "rgba(255, 255, 255, 0.88)", panel: "rgba(255, 255, 255, 0.62)", panelEdge: "rgba(255, 255, 255, 0.9)",
-           pop: "rgba(60, 70, 110, 0.22)", dotOn: "rgba(30, 30, 35, 0.75)", dotOff: "rgba(30, 30, 35, 0.16)" },
-  dark: { bg: "#0e0f12", ink: "#ececf1", pill: "rgba(255, 255, 255, 0.14)", panel: "rgba(255, 255, 255, 0.08)", panelEdge: "rgba(255, 255, 255, 0.16)",
-          pop: "rgba(0, 0, 0, 0.6)", dotOn: "rgba(255, 255, 255, 0.8)", dotOff: "rgba(255, 255, 255, 0.2)" },
-};
-type Mode = (typeof MODE)["light"];
+type Media = HTMLImageElement | HTMLVideoElement;
+const ready = (m: Media) => (m instanceof HTMLVideoElement ? m.readyState >= 2 && m.videoWidth > 0 : m.complete && m.naturalWidth > 0);
+const dims = (m: Media) => (m instanceof HTMLVideoElement ? [m.videoWidth, m.videoHeight] : [m.naturalWidth, m.naturalHeight]);
 
-// Gradient positioned on the card box (bx, by, bw, bh) but filling a bigger area, so it can fade out softly.
-function fillLayer(ctx: CanvasRenderingContext2D, L: Layer, bx: number, by: number, bw: number, bh: number, fw: number, fh: number, dark: boolean) {
-  const g = L.kind === "radial"
-    ? ctx.createRadialGradient(bx + L.x * bw, by + L.y * bh, 0, bx + L.x * bw, by + L.y * bh, L.r * Math.max(bw, bh))
-    : ctx.createLinearGradient(bx + L.x0 * bw, by + L.y0 * bh, bx + L.x1 * bw, by + L.y1 * bh);
-  for (const [o, light, darkC] of L.stops) g.addColorStop(o, dark ? darkC ?? light : light);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, fw, fh);
+/** Draw media into (x, y, w, h) like object-fit: cover (fit = "cover") or contain. */
+function drawFit(ctx: CanvasRenderingContext2D, m: Media, x: number, y: number, w: number, h: number, fit: "cover" | "contain") {
+  const [sw, sh] = dims(m);
+  const s = fit === "cover" ? Math.max(w / sw, h / sh) : Math.min(w / sw, h / sh);
+  const dw = sw * s;
+  const dh = sh * s;
+  ctx.drawImage(m, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
 }
-
-function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number) {
-  const lines: string[] = [];
-  let line = "";
-  for (const word of text.split(" ")) {
-    const test = line ? `${line} ${word}` : word;
-    if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = word; } else line = test;
-  }
-  if (line) lines.push(line);
-  return lines;
-}
-
-const font = (size: number, weight = 400) => `${weight} ${size}px "Open Runde", ui-rounded, -apple-system, sans-serif`;
-
-// Reused offscreen canvas for each card's gradient cloud.
-let scratch: HTMLCanvasElement | null = null;
 
 /**
- * Draw `fn` popped out by amount t (0 = in place, 1 = fully out; can overshoot): it moves by (dx, dy),
- * turns by rot degrees and scales toward sc around (cx, cy), with a soft shadow for lift.
+ * One card: a wide rounded image. Wide covers fill it; tall covers (phone screens) sit whole in the
+ * middle over a soft blurred copy of themselves, so nothing important gets cropped.
  */
-function popped(ctx: CanvasRenderingContext2D, t: number, cx: number, cy: number, dx: number, dy: number, rot: number, sc: number, shadow: string, k: number, fn: () => void) {
-  if (t <= 0.001) { fn(); return; }
+function drawCard(ctx: CanvasRenderingContext2D, item: GlassItem, media: Media | undefined, x: number, y: number, w: number, h: number, dark: boolean, zoom: number) {
+  const r = RADIUS * (w / 720);
   ctx.save();
-  ctx.translate(cx + dx * t, cy + dy * t);
-  ctx.rotate((rot * t * Math.PI) / 180);
-  const s = 1 + (sc - 1) * t;
-  ctx.scale(s, s);
-  ctx.translate(-cx, -cy);
-  const lift = Math.min(Math.max(t, 0), 1);
-  ctx.shadowColor = shadow;
-  ctx.shadowBlur = 26 * k * lift;
-  ctx.shadowOffsetY = 12 * k * lift;
-  fn();
-  ctx.restore();
-}
-
-function drawCard(ctx: CanvasRenderingContext2D, item: GlassItem, i: number, x: number, y: number, w: number, h: number, dark: boolean, dpr: number, pop: number) {
-  const t = THEMES[i % THEMES.length];
-  const m: Mode = dark ? MODE.dark : MODE.light;
-  const k = w / 310; // scale relative to the reference card
-
-  // 1) Gradient cloud: no card body; the gradient fades out softly at its edges.
-  const pad = 0.14 * w;
-  const gw = w + pad * 2;
-  const gh = h + pad * 2;
-  scratch ??= document.createElement("canvas");
-  const sw = Math.ceil(gw * dpr), sh = Math.ceil(gh * dpr);
-  if (scratch.width < sw || scratch.height < sh) { scratch.width = Math.max(scratch.width, sw); scratch.height = Math.max(scratch.height, sh); }
-  const sc = scratch.getContext("2d")!;
-  sc.setTransform(dpr, 0, 0, dpr, 0, 0);
-  sc.globalCompositeOperation = "source-over";
-  sc.clearRect(0, 0, scratch.width / dpr, scratch.height / dpr);
-  sc.fillStyle = t.base[dark ? 1 : 0];
-  sc.fillRect(0, 0, gw, gh);
-  for (const L of t.layers) fillLayer(sc, L, pad, pad, w, h, gw, gh, dark);
-  sc.globalCompositeOperation = "destination-in"; // soft oval mask
-  sc.save();
-  sc.translate(gw / 2, gh / 2);
-  sc.scale(1, gh / gw);
-  const mask = sc.createRadialGradient(0, 0, 0, 0, 0, gw / 2);
-  mask.addColorStop(0, "rgba(0,0,0,1)");
-  mask.addColorStop(0.6, "rgba(0,0,0,0.9)");
-  mask.addColorStop(1, "rgba(0,0,0,0)");
-  sc.fillStyle = mask;
-  sc.fillRect(-gw / 2, -gw / 2, gw, gw);
-  sc.restore();
-  sc.globalCompositeOperation = "source-over";
-  ctx.drawImage(scratch, 0, 0, sw, sh, x - pad, y - pad, gw, gh);
-
-  // 2) UI elements floating on the cloud. On hover each one twists out, a beat after the last.
-  const step = (n: number) => Math.max(0, (pop - n * 0.07) / 0.65);
-  ctx.textBaseline = "alphabetic";
-
-  // Pill, top right ("Category ⌄")
-  ctx.font = font(10.5 * k);
-  const label = item.category;
-  const pw = ctx.measureText(label).width + 30 * k;
-  const ph = 22 * k;
-  const px = x + w - 14 * k - pw;
-  const py = y + 12 * k;
-  popped(ctx, step(0), px + pw / 2, py + ph / 2, 18 * k, -22 * k, 12, 1.14, m.pop, k, () => {
-    ctx.beginPath();
-    ctx.roundRect(px, py, pw, ph, ph / 2);
-    ctx.fillStyle = m.pill;
-    ctx.fill();
-    ctx.shadowColor = "transparent";
-    ctx.fillStyle = m.ink;
-    ctx.textAlign = "left";
-    ctx.fillText(label, px + 10 * k, py + 14.5 * k);
-    ctx.beginPath(); // chevron
-    ctx.moveTo(px + pw - 16 * k, py + 9.5 * k);
-    ctx.lineTo(px + pw - 13 * k, py + 12.5 * k);
-    ctx.lineTo(px + pw - 10 * k, py + 9.5 * k);
-    ctx.strokeStyle = m.ink;
-    ctx.lineWidth = 1.1 * k;
-    ctx.stroke();
-  });
-
-  // Title, top left
-  ctx.font = font(13 * k);
-  const tw = ctx.measureText(item.short).width;
-  popped(ctx, step(1), x + 16 * k + tw / 2, y + 22 * k, -16 * k, -20 * k, -9, 1.1, m.pop, k, () => {
-    ctx.fillStyle = m.ink;
-    ctx.textAlign = "left";
-    ctx.font = font(13 * k);
-    ctx.fillText(item.short, x + 16 * k, y + 26 * k);
-  });
-
-  // Big number (or the project name) + small label
-  const big = item.metric ?? item.short;
-  const cx = x + w / 2 + (t.chart ? 12 * k : 0);
-  const ny = y + h * (t.chart ? 0.3 : 0.42);
-  popped(ctx, step(2), cx, ny - 10 * k, 0, -16 * k, -5, 1.2, m.pop, k, () => {
-    ctx.textAlign = "center";
-    ctx.fillStyle = "#ffffff";
-    ctx.font = font((item.metric ? 40 : 26) * k);
-    ctx.fillText(big, cx, ny);
-    ctx.font = font(10 * k);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-    ctx.fillText(item.metric ? "in testing" : item.category.toLowerCase(), cx, ny + 16 * k);
-  });
-
-  // Little line chart with a marker
-  if (t.chart) {
-    const pts = [0, 0.02, 0.0, -0.05, -0.02, 0.18, 0.32, 0.36, 0.5, 0.48, 0.42, 0.3, 0.26];
-    const cy0 = y + h * 0.58;
-    popped(ctx, step(3), x + w / 2, cy0 - h * 0.08, 0, -10 * k, 4, 1.05, m.pop, k, () => {
-      ctx.beginPath();
-      pts.forEach((v, j) => {
-        const px2 = x + (j / (pts.length - 1)) * w;
-        const py2 = cy0 - v * h * 0.32;
-        if (j === 0) ctx.moveTo(px2, py2); else ctx.lineTo(px2, py2);
-      });
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
-      ctx.lineWidth = 1.6 * k;
-      ctx.lineJoin = "round";
-      ctx.stroke();
-      const mx = x + (8 / (pts.length - 1)) * w;
-      const my = cy0 - pts[8] * h * 0.32;
-      ctx.beginPath();
-      ctx.arc(mx, my, 4.5 * k, 0, Math.PI * 2);
-      ctx.fillStyle = "#ffffff";
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(mx, my);
-      ctx.lineTo(mx, y + h * 0.78);
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
-      ctx.lineWidth = 1 * k;
-      ctx.stroke();
-    });
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, r);
+  ctx.clip();
+  ctx.fillStyle = dark ? "#1b1c21" : "#e6e4e1";
+  ctx.fillRect(x, y, w, h);
+  if (media && ready(media)) {
+    // hover: the image grows a touch inside its frame
+    const zx = x - (w * (zoom - 1)) / 2, zy = y - (h * (zoom - 1)) / 2, zw = w * zoom, zh = h * zoom;
+    if (item.aspect < 1.3) {
+      ctx.filter = "blur(28px) saturate(120%)";
+      drawFit(ctx, media, zx - 40, zy - 40, zw + 80, zh + 80, "cover");
+      ctx.filter = "none";
+      ctx.fillStyle = dark ? "rgba(0, 0, 0, 0.15)" : "rgba(255, 255, 255, 0.12)";
+      ctx.fillRect(x, y, w, h);
+      drawFit(ctx, media, zx + zw * 0.04, zy + zh * 0.06, zw * 0.92, zh * 0.88, "contain");
+    } else {
+      drawFit(ctx, media, zx, zy, zw, zh, "cover");
+    }
   }
-
-  // Frosted panel with the project title
-  const bx = x + 14 * k;
-  const bw = w - 28 * k;
-  const bh = h * 0.2;
-  const by = y + h - bh - 28 * k;
-  popped(ctx, step(4), bx + bw / 2, by + bh / 2, 0, 24 * k, -5, 1.07, m.pop, k, () => {
-    ctx.beginPath();
-    ctx.roundRect(bx, by, bw, bh, 12 * k);
-    ctx.fillStyle = m.panel;
-    ctx.fill();
-    ctx.shadowColor = "transparent";
-    ctx.strokeStyle = m.panelEdge;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.fillStyle = m.ink;
-    ctx.textAlign = "center";
-    ctx.font = font(10.5 * k);
-    const all = wrap(ctx, item.title, bw - 32 * k);
-    const lines = all.slice(0, 2);
-    if (all.length > 2) { // end the second line with an ellipsis that fits
-      let l = lines[1];
-      while (l && ctx.measureText(`${l}…`).width > bw - 32 * k) l = l.slice(0, -1);
-      lines[1] = `${l.trimEnd()}…`;
-    }
-    const lh = 14 * k;
-    let ty = by + bh / 2 - ((lines.length - 1) * lh) / 2 + 3.5 * k;
-    for (const l of lines) { ctx.fillText(l, x + w / 2, ty); ty += lh; }
-  });
-
-  // Page indicator
-  const dotsY = y + h - 12 * k;
-  popped(ctx, step(5), x + w / 2, dotsY, 0, 26 * k, 0, 1.25, m.pop, k, () => {
-    for (let d = 0; d < 5; d++) {
-      const on = d === 3;
-      ctx.fillStyle = on ? m.dotOn : m.dotOff;
-      ctx.fillRect(x + w / 2 - 40 * k + d * 17 * k, dotsY, (on ? 16 : 12) * k, 1.6 * k);
-    }
-  });
+  ctx.restore();
 }
 
 // ---- WebGL lens ------------------------------------------------------------
@@ -396,21 +196,6 @@ function makeLens(canvas: HTMLCanvasElement) {
   };
 }
 
-function StaticCard({ p, i }: { p: GlassItem; i: number }) {
-  const portrait = p.aspect < 1;
-  return (
-    <div className="gcard-glass" style={{ "--tint": TINTS[i % TINTS.length] } as React.CSSProperties}>
-      <p className="gcard-title">{p.title}</p>
-      <div className={`gcard-cover ${portrait ? "is-portrait" : "is-landscape"}`} style={{ aspectRatio: p.aspect }}>
-        {p.isVideo ? <video src={`${p.cover}#t=0.001`} muted playsInline preload="metadata" /> : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={p.cover} alt="" />
-        )}
-      </div>
-    </div>
-  );
-}
-
 export default function GlassHome({ name, bio, currently, items }: Props) {
   const root = useRef<HTMLElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -420,7 +205,7 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
   const trigger = useRef<ScrollTrigger | null>(null);
   const activeRef = useRef(0);
   const darkRef = useRef(false); // follows <html data-theme>
-  const hover = useRef({ t: 0, idx: -1 }); // hover pop on the centred card
+  const hover = useRef({ t: 0, idx: -1 }); // hover zoom on the centred card
   const [active, setActive] = useState(0);
   const [reduced, setReduced] = useState(false);
   const n = items.length;
@@ -449,6 +234,21 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
       const drawCtx = lens ? ctx2d : out.getContext("2d")!;
       const target = lens ? src : out;
 
+      // Covers: images, or muted looping videos.
+      const media: Media[] = items.map((p) => {
+        if (p.isVideo) {
+          const v = document.createElement("video");
+          Object.assign(v, { muted: true, loop: true, playsInline: true, autoplay: true, crossOrigin: "anonymous", preload: "auto" });
+          v.src = p.cover;
+          v.play().catch(() => {});
+          return v;
+        }
+        const im = new Image();
+        im.crossOrigin = "anonymous";
+        im.src = p.cover;
+        return im;
+      });
+
       let W = 0, H = 0, dpr = 1, cardW = 0, cardH = 0;
       const size = () => {
         W = el.clientWidth;
@@ -458,8 +258,8 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
         out.height = Math.round(H * dpr);
         src.width = Math.round(W * (1 + 2 * LENS.overscan) * dpr);
         src.height = Math.round(H * dpr);
-        cardW = Math.min(390, 0.27 * W, 0.49 * H * CARD_RATIO);
-        if (W < 810) cardW = Math.min(0.68 * W, 0.5 * H * CARD_RATIO);
+        cardW = Math.min(760, 0.5 * W, 0.42 * H * CARD_RATIO);
+        if (W < 810) cardW = 0.86 * W;
         cardH = cardW / CARD_RATIO;
       };
 
@@ -488,7 +288,8 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
         const html = document.documentElement;
         html.style.setProperty("--nav-hide", navHide.toFixed(3));
         if (navHide > 0.95) html.dataset.navHidden = ""; else delete html.dataset.navHidden;
-        const focus = W < 810 ? 0.5 : FOCUS_X;
+
+        const focus = FOCUS_X;
         const ox = lens ? LENS.overscan * W : 0; // shift into the wider source canvas
         drawCtx.setTransform(dpr, 0, 0, dpr, ox * dpr, 0);
         const dark = darkRef.current;
@@ -506,17 +307,20 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
             link.style.height = `${chh}px`;
           }
           if (x > W + ox + 40 || x + cw < -ox - 40) return;
-          drawCard(drawCtx, item, j, x, y, cw, chh, dark, dpr, hover.current.idx === j ? hover.current.t : 0);
+          const zoom = 1 + 0.035 * (hover.current.idx === j ? hover.current.t : 0);
+          drawCard(drawCtx, item, media[j], x, y, cw, chh, dark, zoom);
         });
         if (lens) lens.draw(target, focus, 1 - cardY, cw / 2 / W + LENS.flatPad); // GL's y runs bottom-up
         const a = clamp(Math.round(p), 0, n - 1);
         if (a !== activeRef.current) { activeRef.current = a; setActive(a); }
 
-        // Case study text under the centred card: there once the intro has cleared and a card has settled.
+        // Name, tags and line under the centred card: there once the intro has cleared and a card has settled.
         if (info.current) {
           const settle = 1 - travel(clamp(Math.abs(p - a) / 0.35, 0, 1));
           const shown = clamp((introT - 0.5) * 2, 0, 1) * settle;
-          info.current.style.top = `${cy + chh / 2 + 28}px`;
+          info.current.style.left = `${focus * W - cw / 2}px`;
+          info.current.style.width = `${cw}px`;
+          info.current.style.top = `${cy + chh / 2 + 22}px`;
           info.current.style.opacity = shown.toFixed(3);
           info.current.style.visibility = shown > 0.02 ? "visible" : "hidden";
         }
@@ -562,6 +366,7 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
         delete document.documentElement.dataset.navHidden;
         ro.disconnect();
         io.disconnect();
+        media.forEach((m) => { if (m instanceof HTMLVideoElement) { m.pause(); m.removeAttribute("src"); m.load(); } });
       };
     });
     mm.add("(prefers-reduced-motion: reduce)", () => { setReduced(true); });
@@ -575,26 +380,26 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
     scrollToY(st.start + ((INTRO_SCROLL + k * SCROLL_PER_CARD) / total) * (st.end - st.start));
   };
 
-  // When a project centres: its title, description, tags and link rise in one after another.
+  // When a project centres: its name, tags and line rise in one after another.
   useEffect(() => {
     if (reduced) return;
     const ctx = gsap.context(() => {
       gsap.fromTo(
-        ".ghome-info-title, .ghome-info-desc, .ghome-info-tags li, .ghome-info-cta",
+        ".ghome-info-name, .ghome-info-tags li, .ghome-info-desc",
         { y: 14, opacity: 0 },
         { y: 0, opacity: 1, duration: DUR.base, ease: EASE.out, stagger: STAGGER },
       );
     }, info);
     return () => ctx.revert();
   }, [active, reduced]);
-  // Hovering the centred card: its UI elements twist out (springy); leaving settles them back.
-  const popOut = (i: number) => {
+
+  // Hovering the centred card: the image grows a touch inside its frame.
+  const zoomIn = (i: number) => {
     if (reduced || i !== activeRef.current) return;
     hover.current.idx = i;
-    gsap.to(hover.current, { t: 1, duration: DUR.slow, ease: EASE.spring, overwrite: true });
+    gsap.to(hover.current, { t: 1, duration: DUR.slow, ease: EASE.out, overwrite: true });
   };
-  const popIn = () => { gsap.to(hover.current, { t: 0, duration: DUR.base, ease: EASE.out, overwrite: true }); };
-  useEffect(() => { popIn(); }, [active]); // moving to another project settles the last one
+  const zoomOut = () => { gsap.to(hover.current, { t: 0, duration: DUR.base, ease: EASE.out, overwrite: true }); };
 
   // Side card click brings it into focus; the focused card opens the case study.
   const onCardClick = (k: number) => (e: React.MouseEvent) => {
@@ -614,21 +419,39 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
     </div>
   );
 
+  const details = (p: GlassItem) => (
+    <>
+      <div className="ghome-info-row">
+        <span className="ghome-info-name">{p.short}</span>
+        <ul className="ghome-info-tags">{p.tags.slice(0, 3).map((t) => <li key={t}>{t}</li>)}</ul>
+      </div>
+      <p className="ghome-info-desc">{p.title}</p>
+    </>
+  );
+
   // Reduced motion: a plain, flat row you scroll sideways.
   if (reduced) {
     return (
       <section id="top" className="ghome is-static" aria-label="Selected work">
         {introBlock}
         <div className="ghome-stage">
-          {items.map((p, i) => (
-            <Link key={p.slug} href={`/${p.slug}`} className="gcard" aria-label={`Open ${p.title}`}>
-              <StaticCard p={p} i={i} />
+          {items.map((p) => (
+            <Link key={p.slug} href={`/${p.slug}`} className="pcard" aria-label={`Open ${p.title}`}>
+              <div className="pcard-media">
+                {p.isVideo ? <video src={`${p.cover}#t=0.001`} muted playsInline preload="metadata" /> : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.cover} alt="" />
+                )}
+              </div>
+              <div className="ghome-info-inner">{details(p)}</div>
             </Link>
           ))}
         </div>
       </section>
     );
   }
+
+  const current = items[active];
 
   return (
     <section ref={root} id="top" className="ghome" aria-label="Selected work">
@@ -644,20 +467,15 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
           ref={(el) => { links.current[i] = el; }}
           onClick={onCardClick(i)}
           onFocus={() => { if (i !== activeRef.current) goTo(i); }}
-          onMouseEnter={() => popOut(i)}
-          onMouseLeave={() => popIn()}
+          onMouseEnter={() => zoomIn(i)}
+          onMouseLeave={zoomOut}
         />
       ))}
       <div ref={info} className="ghome-info" aria-live="polite">
-        {items[active] && (
-          <div key={items[active].slug} className="ghome-info-inner">
-            <Link href={`/${items[active].slug}`} className="ghome-info-title">{items[active].title}</Link>
-            <p className="ghome-info-desc">{items[active].description}</p>
-            <ul className="ghome-info-tags">
-              {items[active].tags.map((t) => <li key={t}>{t}</li>)}
-            </ul>
-            <Link href={`/${items[active].slug}`} className="ghome-info-cta"><span className="ulink">View case study</span> →</Link>
-          </div>
+        {current && (
+          <Link key={current.slug} href={`/${current.slug}`} className="ghome-info-inner">
+            {details(current)}
+          </Link>
         )}
       </div>
     </section>
