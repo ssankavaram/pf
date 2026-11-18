@@ -8,19 +8,19 @@ import { DUR, EASE, SCRUB, STAGGER, scrollToY } from "@/lib/motion";
 import { LENS, makeLens } from "@/lib/lens";
 import Fluted from "./Fluted";
 import ContactIcons from "./ContactIcons";
-import HomeWidget from "./HomeWidget";
 
 export type HomeItem = {
   slug: string;
   short: string; // "Investing education"
   line: string;  // one-liner after the name
+  cover?: string; // a finished card image (e.g. exported from Figma) instead of the plain glass
   tags: string[];
 };
 
 /* ---- Tuning knobs ------------------------------------------------------- */
 const INTRO_SCROLL = 0.6;     // screen-heights of scrolling to clear the nav + intro and bring the cards to centre
 const SCROLL_PER_CARD = 0.8;  // screen-heights of scrolling to move one card
-const CARD_RATIO = 616 / 437; // design card (Figma)
+const CARD_RATIO = 763 / 437; // design card (Figma node 61:2831)
 const FRAME = 12;             // frame margin around the glass when focused/hovered (px at design size)
 const CARD_Y = 0.78;          // card centre at the start (under the intro, bottom may be cut off), × section height
 const CARD_Y_FOCUS = 0.42;    // card centre once the intro has cleared (room for the caption below)
@@ -38,8 +38,8 @@ const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
  * over a frame 141.5% × 140.6% of the glass, centred) fills the card; `frame` (0–1) eases in the
  * #373636 margin, stroke and smaller inner radius used for the focused / hovered card.
  */
-function drawCard(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number, frame: number) {
-  const k = w / 616;
+function drawCard(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number, frame: number, cover?: HTMLImageElement) {
+  const k = w / 763;
   if (frame > 0.01) {
     ctx.save();
     ctx.globalAlpha = frame;
@@ -60,7 +60,10 @@ function drawCard(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: numbe
   ctx.clip();
   ctx.fillStyle = GLASS_BG;
   ctx.fillRect(ix, iy, iw, ih);
-  if (img.complete && img.naturalWidth) {
+  if (cover) {
+    // A finished card design from Figma (exported at 2×), filling the glass area.
+    if (cover.complete && cover.naturalWidth) ctx.drawImage(cover, ix, iy, iw, ih);
+  } else if (img.complete && img.naturalWidth) {
     const F = iw * 1.4152, fx = ix - iw * 0.2076, sw = F / 31, fh = ih * 1.4063;
     const IW = img.naturalWidth, IH = img.naturalHeight;
     for (let i = 0; i < 31; i++) ctx.drawImage(img, 0.03 * i * IW, 0, 0.1 * IW, IH, fx + i * sw, iy, sw + 0.6, fh);
@@ -80,7 +83,6 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
   const root = useRef<HTMLElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const intro = useRef<HTMLDivElement>(null);
-  const widget = useRef<HTMLDivElement>(null);
   const info = useRef<HTMLDivElement>(null);
   const links = useRef<(HTMLAnchorElement | null)[]>([]);
   const trigger = useRef<ScrollTrigger | null>(null);
@@ -107,6 +109,12 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
 
       const img = new Image();
       img.src = "/home/card-glass.png";
+      const covers: (HTMLImageElement | undefined)[] = items.map((p) => {
+        if (!p.cover) return undefined;
+        const c = new Image();
+        c.src = p.cover;
+        return c;
+      });
 
       let W = 0, H = 0, dpr = 1, cardW = 0, cardH = 0;
       const size = () => {
@@ -166,20 +174,8 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
           const focused = (1 - clamp(Math.abs(j - p) / 0.35, 0, 1)) * introT;
           const hov = hover.current.idx === j ? hover.current.t : 0;
           const f = Math.max(focused, hov);
-          if (j === 0 && widget.current) {
-            // Widget sits on the first card's glass while it's centred; fades as the card slides away.
-            const inset = FRAME * (cw / 616) * f;
-            const box = widget.current;
-            box.style.transform = `translate3d(${x + inset}px, ${y + inset}px, 0)`;
-            box.style.width = `${cw - inset * 2}px`;
-            box.style.height = `${chh - inset * 2}px`;
-            box.style.setProperty("--k", ((cw - inset * 2) / 592).toFixed(4));
-            const near = clamp(1 - Math.abs(p) * 2.5, 0, 1);
-            box.style.opacity = near.toFixed(3);
-            box.style.visibility = near > 0.01 ? "visible" : "hidden";
-          }
           if (x > W + ox + 40 || x + cw < -ox - 40) return;
-          drawCard(drawCtx, img, x, y, cw, chh, f);
+          drawCard(drawCtx, img, x, y, cw, chh, f, covers[j]);
         });
         if (lens) lens.draw(target, focus, 1 - cardY, Math.max(LENS.flat, cw * 0.5 / W)); // flat middle, bends toward the screen edges // GL's y runs bottom-up
 
@@ -290,8 +286,9 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
             <Link key={p.slug} href={`/${p.slug}`} className="dcard-static" aria-label={`Open ${p.short}`}>
               <div className="dcard">
                 <div className="dcard-inner">
-                  <Fluted src="/home/card-glass.png" strips={31} className="dcard-fluted" />
-                  {i === 0 && <HomeWidget />}
+                  {p.cover
+                    ? <img src={p.cover} alt="" className="dcard-cover" />
+                    : <Fluted src="/home/card-glass.png" strips={31} className="dcard-fluted" />}
                 </div>
               </div>
               {caption(p)}
@@ -306,7 +303,6 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
     <section ref={root} id="top" className="dhome" aria-label="Selected work">
       <canvas ref={canvas} className="dhome-canvas" aria-hidden />
       {introBlock}
-      <div ref={widget} className="dhome-widget" aria-hidden><HomeWidget /></div>
       {/* Real links laid over the drawn cards: clicks, keyboard focus, screen readers, hover */}
       {items.map((p, i) => (
         <Link

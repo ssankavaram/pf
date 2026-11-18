@@ -8,6 +8,7 @@ export default function Home() {
     slug: p.slug,
     short: p.short ?? p.title,
     line: p.line ?? p.title,
+    cover: p.homeCover,
     tags: p.cardTags ?? p.tags?.slice(0, 3) ?? p.meta.split(" · ").slice(0, 3),
   }));
 

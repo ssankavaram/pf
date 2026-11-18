@@ -18,6 +18,7 @@ export type Project = {
   tags?: string[];      // pills under the project in the home gallery (falls back to meta)
   line?: string;        // one-liner after the name under the home card
   cardTags?: string[];  // tags under the home card (falls back to tags / meta)
+  homeCover?: string;   // finished card image for the home carousel (else plain fractal glass)
   title: string;
   meta: string;
   cover: string;

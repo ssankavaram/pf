@@ -1,6 +1,7 @@
 [
   {
     "slug": "investing-education",
+    "homeCover": "/home/card1.jpg",
     "line": "Lifting engagement by 47% at a leading national bank",
     "cardTags": ["End-to-end", "Enterprise", "Prototyping in code"],
     "coverAspect": 0.48,
