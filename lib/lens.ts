@@ -3,15 +3,15 @@
 // The scene is drawn into a 2D canvas first; this WebGL pass bends it.
 
 export const LENS = {
-  bend: 0.5,      // how much taller things get at the edges (vertical magnify)
-  squeeze: 0.06,  // how much they compress sideways at the edges
+  bend: 0.14,     // how much taller things get at the edges (vertical magnify)
+  squeeze: 0.04,  // how much they compress sideways at the edges
   flatPad: 0.0,   // extra flat zone beyond the focused card's own edges (× screen width)
   span: 0.34,     // how wide the bending zone is (× screen width)
-  corner: 0.9,    // extra bend + blur toward the top/bottom corners
-  aberr: 0.55,    // rainbow: how far red and blue split apart at the edges
-  blur: 0.028,    // dreamy out-of-focus blur at the edges (× screen width)
-  sheen: 0.07,    // soft rainbow tint over the curved glass
-  haze: 0.3,      // glow toward the far edges
+  corner: 0.25,   // extra bend + blur toward the top/bottom corners
+  aberr: 0.95,    // rainbow: how far red and blue split apart at the edges
+  blur: 0.004,    // slight softening at the edges (× screen width)
+  sheen: 0.13,    // soft rainbow tint over the curved glass
+  haze: 0.15,     // glow toward the far edges
   overscan: 0.22, // the scene is drawn this far past each screen edge (× width) so the lens always has content to bend in
 };
 
