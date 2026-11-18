@@ -58,14 +58,16 @@ function drawCard(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: numbe
   ctx.beginPath();
   ctx.roundRect(ix, iy, iw, ih, 12 - 4 * frame);
   ctx.clip();
-  ctx.fillStyle = GLASS_BG;
-  ctx.fillRect(ix, iy, iw, ih);
   if (cover) {
-    // A finished card design from Figma (exported at 2×), filling the glass area.
+    // A finished card design from Figma (exported at 2×). 'lighten' lets its dark background
+    // (darker than the page) melt into the page, so only the gradients and UI show.
+    ctx.globalCompositeOperation = "lighten";
     if (cover.complete && cover.naturalWidth) ctx.drawImage(cover, ix, iy, iw, ih);
-  } else if (img.complete && img.naturalWidth) {
+  } else {
+    ctx.fillStyle = GLASS_BG;
+    ctx.fillRect(ix, iy, iw, ih);
     // Smooth glass gradient (no reeded strips, so no vertical lines)
-    ctx.drawImage(img, ix - iw * 0.2076, iy, iw * 1.4152, ih * 1.4063);
+    if (img.complete && img.naturalWidth) ctx.drawImage(img, ix - iw * 0.2076, iy, iw * 1.4152, ih * 1.4063);
   }
   ctx.restore();
 }
