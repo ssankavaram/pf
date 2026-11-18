@@ -22,11 +22,11 @@ const INTRO_SCROLL = 0.6;     // screen-heights of scrolling to clear the nav + 
 const SCROLL_PER_CARD = 0.8;  // screen-heights of scrolling to move one card
 const CARD_RATIO = 616 / 437; // design card (Figma)
 const FRAME = 12;             // frame margin around the glass when focused/hovered (px at design size)
-const CARD_Y = 0.66;          // card centre at the start (under the intro), × section height
-const CARD_Y_FOCUS = 0.44;    // card centre once the intro has cleared (room for the caption below)
-const FOCUS_GROW = 1.08;      // cards grow a little as they take focus…
-const IMMERSE_GROW = 1.06;    // …and keep growing gently through the carousel
-const GAP = 0.06;             // space between cards, × screen width
+const CARD_Y = 0.78;          // card centre at the start (under the intro, bottom may be cut off), × section height
+const CARD_Y_FOCUS = 0.42;    // card centre once the intro has cleared (room for the caption below)
+const FOCUS_GROW = 1.04;      // cards grow a little as they take focus…
+const IMMERSE_GROW = 1.04;    // …and keep growing gently through the carousel
+const GAP = 0.05;             // space between cards, × screen width
 const BG = "#2a2929";         // section background (must match --paper)
 const GLASS_BG = "#1a1a1a";   // behind the glass strips
 /* ------------------------------------------------------------------------ */
@@ -117,8 +117,8 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
         out.height = Math.round(H * dpr);
         src.width = Math.round(W * (1 + 2 * LENS.overscan) * dpr);
         src.height = Math.round(H * dpr);
-        cardW = Math.min(616, 0.43 * W, 0.4 * H * CARD_RATIO);
-        if (W < 810) cardW = 0.84 * W;
+        cardW = Math.min(1040, 0.62 * W, 0.6 * H * CARD_RATIO); // big: the focused card fills most of the screen
+        if (W < 810) cardW = 0.86 * W;
         cardH = cardW / CARD_RATIO;
       };
 
@@ -181,7 +181,7 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
           if (x > W + ox + 40 || x + cw < -ox - 40) return;
           drawCard(drawCtx, img, x, y, cw, chh, f);
         });
-        if (lens) lens.draw(target, focus, 1 - cardY, cw / 2 / W + LENS.flatPad); // GL's y runs bottom-up
+        if (lens) lens.draw(target, focus, 1 - cardY, cw * 0.42 / W + LENS.flatPad); // GL's y runs bottom-up
 
         const a = clamp(Math.round(p), 0, n - 1);
         if (a !== activeRef.current) { activeRef.current = a; setActive(a); }
