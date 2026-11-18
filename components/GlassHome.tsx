@@ -26,6 +26,7 @@ const FOCUS_X = 0.5;         // where the focused card's centre sits, × screen 
 const CARD_Y = 0.63;         // card centre at the start, × section height (below the intro)
 const CARD_Y_FOCUS = 0.4;    // card centre once the intro has cleared (leaves room for the text below)
 const FOCUS_GROW = 1.06;     // cards grow a little as they take focus
+const IMMERSE_GROW = 1.08;   // …and keep growing gently as you scroll through the carousel
 const GAP = 0.09;            // space between cards, × screen width
 const CARD_RATIO = 310 / 392; // portrait, like the reference cards
 // The lens: a curved pane of glass fixed to the screen. Cards are flat in the middle and bend as they
@@ -131,19 +132,20 @@ const THEMES: Theme[] = [
 // Colours that depend on light/dark mode (cards are drawn on canvas, so CSS variables can't reach them).
 const MODE = {
   light: { bg: "#f2f2f2", ink: "#2b2b30", pill: "rgba(255, 255, 255, 0.88)", panel: "rgba(255, 255, 255, 0.62)", panelEdge: "rgba(255, 255, 255, 0.9)",
-           edge: "rgba(255, 255, 255, 0.85)", shadow: "rgba(60, 70, 110, 0.14)", dotOn: "rgba(30, 30, 35, 0.75)", dotOff: "rgba(30, 30, 35, 0.16)" },
+           pop: "rgba(60, 70, 110, 0.22)", dotOn: "rgba(30, 30, 35, 0.75)", dotOff: "rgba(30, 30, 35, 0.16)" },
   dark: { bg: "#0e0f12", ink: "#ececf1", pill: "rgba(255, 255, 255, 0.14)", panel: "rgba(255, 255, 255, 0.08)", panelEdge: "rgba(255, 255, 255, 0.16)",
-          edge: "rgba(255, 255, 255, 0.18)", shadow: "rgba(0, 0, 0, 0.55)", dotOn: "rgba(255, 255, 255, 0.8)", dotOff: "rgba(255, 255, 255, 0.2)" },
+          pop: "rgba(0, 0, 0, 0.6)", dotOn: "rgba(255, 255, 255, 0.8)", dotOff: "rgba(255, 255, 255, 0.2)" },
 };
 type Mode = (typeof MODE)["light"];
 
-function fillLayer(ctx: CanvasRenderingContext2D, L: Layer, x: number, y: number, w: number, h: number, dark: boolean) {
+// Gradient positioned on the card box (bx, by, bw, bh) but filling a bigger area, so it can fade out softly.
+function fillLayer(ctx: CanvasRenderingContext2D, L: Layer, bx: number, by: number, bw: number, bh: number, fw: number, fh: number, dark: boolean) {
   const g = L.kind === "radial"
-    ? ctx.createRadialGradient(x + L.x * w, y + L.y * h, 0, x + L.x * w, y + L.y * h, L.r * Math.max(w, h))
-    : ctx.createLinearGradient(x + L.x0 * w, y + L.y0 * h, x + L.x1 * w, y + L.y1 * h);
+    ? ctx.createRadialGradient(bx + L.x * bw, by + L.y * bh, 0, bx + L.x * bw, by + L.y * bh, L.r * Math.max(bw, bh))
+    : ctx.createLinearGradient(bx + L.x0 * bw, by + L.y0 * bh, bx + L.x1 * bw, by + L.y1 * bh);
   for (const [o, light, darkC] of L.stops) g.addColorStop(o, dark ? darkC ?? light : light);
   ctx.fillStyle = g;
-  ctx.fillRect(x, y, w, h);
+  ctx.fillRect(0, 0, fw, fh);
 }
 
 function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number) {
@@ -159,35 +161,65 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number) {
 
 const font = (size: number, weight = 400) => `${weight} ${size}px "Open Runde", ui-rounded, -apple-system, sans-serif`;
 
-function drawCard(ctx: CanvasRenderingContext2D, item: GlassItem, i: number, x: number, y: number, w: number, h: number, dark: boolean) {
+// Reused offscreen canvas for each card's gradient cloud.
+let scratch: HTMLCanvasElement | null = null;
+
+/**
+ * Draw `fn` popped out by amount t (0 = in place, 1 = fully out; can overshoot): it moves by (dx, dy),
+ * turns by rot degrees and scales toward sc around (cx, cy), with a soft shadow for lift.
+ */
+function popped(ctx: CanvasRenderingContext2D, t: number, cx: number, cy: number, dx: number, dy: number, rot: number, sc: number, shadow: string, k: number, fn: () => void) {
+  if (t <= 0.001) { fn(); return; }
+  ctx.save();
+  ctx.translate(cx + dx * t, cy + dy * t);
+  ctx.rotate((rot * t * Math.PI) / 180);
+  const s = 1 + (sc - 1) * t;
+  ctx.scale(s, s);
+  ctx.translate(-cx, -cy);
+  const lift = Math.min(Math.max(t, 0), 1);
+  ctx.shadowColor = shadow;
+  ctx.shadowBlur = 26 * k * lift;
+  ctx.shadowOffsetY = 12 * k * lift;
+  fn();
+  ctx.restore();
+}
+
+function drawCard(ctx: CanvasRenderingContext2D, item: GlassItem, i: number, x: number, y: number, w: number, h: number, dark: boolean, dpr: number, pop: number) {
   const t = THEMES[i % THEMES.length];
   const m: Mode = dark ? MODE.dark : MODE.light;
   const k = w / 310; // scale relative to the reference card
-  const r = 14 * k;
 
-  // Card body + soft shadow
-  ctx.save();
-  ctx.shadowColor = m.shadow;
-  ctx.shadowBlur = 36 * k;
-  ctx.shadowOffsetY = 16 * k;
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, r);
-  ctx.fillStyle = t.base[dark ? 1 : 0];
-  ctx.fill();
-  ctx.restore();
+  // 1) Gradient cloud: no card body; the gradient fades out softly at its edges.
+  const pad = 0.14 * w;
+  const gw = w + pad * 2;
+  const gh = h + pad * 2;
+  scratch ??= document.createElement("canvas");
+  const sw = Math.ceil(gw * dpr), sh = Math.ceil(gh * dpr);
+  if (scratch.width < sw || scratch.height < sh) { scratch.width = Math.max(scratch.width, sw); scratch.height = Math.max(scratch.height, sh); }
+  const sc = scratch.getContext("2d")!;
+  sc.setTransform(dpr, 0, 0, dpr, 0, 0);
+  sc.globalCompositeOperation = "source-over";
+  sc.clearRect(0, 0, scratch.width / dpr, scratch.height / dpr);
+  sc.fillStyle = t.base[dark ? 1 : 0];
+  sc.fillRect(0, 0, gw, gh);
+  for (const L of t.layers) fillLayer(sc, L, pad, pad, w, h, gw, gh, dark);
+  sc.globalCompositeOperation = "destination-in"; // soft oval mask
+  sc.save();
+  sc.translate(gw / 2, gh / 2);
+  sc.scale(1, gh / gw);
+  const mask = sc.createRadialGradient(0, 0, 0, 0, 0, gw / 2);
+  mask.addColorStop(0, "rgba(0,0,0,1)");
+  mask.addColorStop(0.6, "rgba(0,0,0,0.9)");
+  mask.addColorStop(1, "rgba(0,0,0,0)");
+  sc.fillStyle = mask;
+  sc.fillRect(-gw / 2, -gw / 2, gw, gw);
+  sc.restore();
+  sc.globalCompositeOperation = "source-over";
+  ctx.drawImage(scratch, 0, 0, sw, sh, x - pad, y - pad, gw, gh);
 
-  ctx.save();
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, r);
-  ctx.clip();
-  for (const L of t.layers) fillLayer(ctx, L, x, y, w, h, dark);
-
-  // Title, top left
+  // 2) UI elements floating on the cloud. On hover each one twists out, a beat after the last.
+  const step = (n: number) => Math.max(0, (pop - n * 0.07) / 0.65);
   ctx.textBaseline = "alphabetic";
-  ctx.fillStyle = m.ink;
-  ctx.font = font(13 * k);
-  ctx.textAlign = "left";
-  ctx.fillText(item.short, x + 16 * k, y + 26 * k);
 
   // Pill, top right ("Category ⌄")
   ctx.font = font(10.5 * k);
@@ -196,61 +228,76 @@ function drawCard(ctx: CanvasRenderingContext2D, item: GlassItem, i: number, x: 
   const ph = 22 * k;
   const px = x + w - 14 * k - pw;
   const py = y + 12 * k;
-  ctx.beginPath();
-  ctx.roundRect(px, py, pw, ph, ph / 2);
-  ctx.fillStyle = m.pill;
-  ctx.fill();
-  ctx.fillStyle = m.ink;
-  ctx.fillText(label, px + 10 * k, py + 14.5 * k);
-  ctx.beginPath(); // chevron
-  ctx.moveTo(px + pw - 16 * k, py + 9.5 * k);
-  ctx.lineTo(px + pw - 13 * k, py + 12.5 * k);
-  ctx.lineTo(px + pw - 10 * k, py + 9.5 * k);
-  ctx.strokeStyle = m.ink;
-  ctx.lineWidth = 1.1 * k;
-  ctx.stroke();
+  popped(ctx, step(0), px + pw / 2, py + ph / 2, 18 * k, -22 * k, 12, 1.14, m.pop, k, () => {
+    ctx.beginPath();
+    ctx.roundRect(px, py, pw, ph, ph / 2);
+    ctx.fillStyle = m.pill;
+    ctx.fill();
+    ctx.shadowColor = "transparent";
+    ctx.fillStyle = m.ink;
+    ctx.textAlign = "left";
+    ctx.fillText(label, px + 10 * k, py + 14.5 * k);
+    ctx.beginPath(); // chevron
+    ctx.moveTo(px + pw - 16 * k, py + 9.5 * k);
+    ctx.lineTo(px + pw - 13 * k, py + 12.5 * k);
+    ctx.lineTo(px + pw - 10 * k, py + 9.5 * k);
+    ctx.strokeStyle = m.ink;
+    ctx.lineWidth = 1.1 * k;
+    ctx.stroke();
+  });
+
+  // Title, top left
+  ctx.font = font(13 * k);
+  const tw = ctx.measureText(item.short).width;
+  popped(ctx, step(1), x + 16 * k + tw / 2, y + 22 * k, -16 * k, -20 * k, -9, 1.1, m.pop, k, () => {
+    ctx.fillStyle = m.ink;
+    ctx.textAlign = "left";
+    ctx.font = font(13 * k);
+    ctx.fillText(item.short, x + 16 * k, y + 26 * k);
+  });
 
   // Big number (or the project name) + small label
   const big = item.metric ?? item.short;
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#ffffff";
-  ctx.shadowColor = "rgba(0, 0, 0, 0.12)";
-  ctx.shadowBlur = 12 * k;
-  ctx.font = font((item.metric ? 40 : 26) * k);
   const cx = x + w / 2 + (t.chart ? 12 * k : 0);
   const ny = y + h * (t.chart ? 0.3 : 0.42);
-  ctx.fillText(big, cx, ny);
-  ctx.shadowBlur = 0;
-  ctx.font = font(10 * k);
-  ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-  ctx.fillText(item.metric ? "in testing" : item.category.toLowerCase(), cx, ny + 16 * k);
+  popped(ctx, step(2), cx, ny - 10 * k, 0, -16 * k, -5, 1.2, m.pop, k, () => {
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = font((item.metric ? 40 : 26) * k);
+    ctx.fillText(big, cx, ny);
+    ctx.font = font(10 * k);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+    ctx.fillText(item.metric ? "in testing" : item.category.toLowerCase(), cx, ny + 16 * k);
+  });
 
   // Little line chart with a marker
   if (t.chart) {
     const pts = [0, 0.02, 0.0, -0.05, -0.02, 0.18, 0.32, 0.36, 0.5, 0.48, 0.42, 0.3, 0.26];
     const cy0 = y + h * 0.58;
-    ctx.beginPath();
-    pts.forEach((v, j) => {
-      const px2 = x + (j / (pts.length - 1)) * w;
-      const py2 = cy0 - v * h * 0.32;
-      if (j === 0) ctx.moveTo(px2, py2); else ctx.lineTo(px2, py2);
+    popped(ctx, step(3), x + w / 2, cy0 - h * 0.08, 0, -10 * k, 4, 1.05, m.pop, k, () => {
+      ctx.beginPath();
+      pts.forEach((v, j) => {
+        const px2 = x + (j / (pts.length - 1)) * w;
+        const py2 = cy0 - v * h * 0.32;
+        if (j === 0) ctx.moveTo(px2, py2); else ctx.lineTo(px2, py2);
+      });
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+      ctx.lineWidth = 1.6 * k;
+      ctx.lineJoin = "round";
+      ctx.stroke();
+      const mx = x + (8 / (pts.length - 1)) * w;
+      const my = cy0 - pts[8] * h * 0.32;
+      ctx.beginPath();
+      ctx.arc(mx, my, 4.5 * k, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(mx, my);
+      ctx.lineTo(mx, y + h * 0.78);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+      ctx.lineWidth = 1 * k;
+      ctx.stroke();
     });
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
-    ctx.lineWidth = 1.6 * k;
-    ctx.lineJoin = "round";
-    ctx.stroke();
-    const mx = x + (8 / (pts.length - 1)) * w;
-    const my = cy0 - pts[8] * h * 0.32;
-    ctx.beginPath();
-    ctx.arc(mx, my, 4.5 * k, 0, Math.PI * 2);
-    ctx.fillStyle = "#ffffff";
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(mx, my);
-    ctx.lineTo(mx, y + h * 0.78);
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
-    ctx.lineWidth = 1 * k;
-    ctx.stroke();
   }
 
   // Frosted panel with the project title
@@ -258,41 +305,39 @@ function drawCard(ctx: CanvasRenderingContext2D, item: GlassItem, i: number, x: 
   const bw = w - 28 * k;
   const bh = h * 0.2;
   const by = y + h - bh - 28 * k;
-  ctx.beginPath();
-  ctx.roundRect(bx, by, bw, bh, 12 * k);
-  ctx.fillStyle = m.panel;
-  ctx.fill();
-  ctx.strokeStyle = m.panelEdge;
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.fillStyle = m.ink;
-  ctx.font = font(10.5 * k);
-  const all = wrap(ctx, item.title, bw - 32 * k);
-  const lines = all.slice(0, 2);
-  if (all.length > 2) { // end the second line with an ellipsis that fits
-    let l = lines[1];
-    while (l && ctx.measureText(`${l}…`).width > bw - 32 * k) l = l.slice(0, -1);
-    lines[1] = `${l.trimEnd()}…`;
-  }
-  const lh = 14 * k;
-  let ty = by + bh / 2 - ((lines.length - 1) * lh) / 2 + 3.5 * k;
-  for (const l of lines) { ctx.fillText(l, x + w / 2, ty); ty += lh; }
+  popped(ctx, step(4), bx + bw / 2, by + bh / 2, 0, 24 * k, -5, 1.07, m.pop, k, () => {
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, 12 * k);
+    ctx.fillStyle = m.panel;
+    ctx.fill();
+    ctx.shadowColor = "transparent";
+    ctx.strokeStyle = m.panelEdge;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = m.ink;
+    ctx.textAlign = "center";
+    ctx.font = font(10.5 * k);
+    const all = wrap(ctx, item.title, bw - 32 * k);
+    const lines = all.slice(0, 2);
+    if (all.length > 2) { // end the second line with an ellipsis that fits
+      let l = lines[1];
+      while (l && ctx.measureText(`${l}…`).width > bw - 32 * k) l = l.slice(0, -1);
+      lines[1] = `${l.trimEnd()}…`;
+    }
+    const lh = 14 * k;
+    let ty = by + bh / 2 - ((lines.length - 1) * lh) / 2 + 3.5 * k;
+    for (const l of lines) { ctx.fillText(l, x + w / 2, ty); ty += lh; }
+  });
 
   // Page indicator
   const dotsY = y + h - 12 * k;
-  for (let d = 0; d < 5; d++) {
-    const on = d === 3;
-    ctx.fillStyle = on ? m.dotOn : m.dotOff;
-    ctx.fillRect(x + w / 2 - 40 * k + d * 17 * k, dotsY, (on ? 16 : 12) * k, 1.6 * k);
-  }
-  ctx.restore();
-
-  // Bright glass edge
-  ctx.beginPath();
-  ctx.roundRect(x + 0.5, y + 0.5, w - 1, h - 1, r);
-  ctx.strokeStyle = m.edge;
-  ctx.lineWidth = 1.2;
-  ctx.stroke();
+  popped(ctx, step(5), x + w / 2, dotsY, 0, 26 * k, 0, 1.25, m.pop, k, () => {
+    for (let d = 0; d < 5; d++) {
+      const on = d === 3;
+      ctx.fillStyle = on ? m.dotOn : m.dotOff;
+      ctx.fillRect(x + w / 2 - 40 * k + d * 17 * k, dotsY, (on ? 16 : 12) * k, 1.6 * k);
+    }
+  });
 }
 
 // ---- WebGL lens ------------------------------------------------------------
@@ -375,6 +420,7 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
   const trigger = useRef<ScrollTrigger | null>(null);
   const activeRef = useRef(0);
   const darkRef = useRef(false); // follows <html data-theme>
+  const hover = useRef({ t: 0, idx: -1 }); // hover pop on the centred card
   const [active, setActive] = useState(0);
   const [reduced, setReduced] = useState(false);
   const n = items.length;
@@ -425,7 +471,8 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
         if (!W) return;
         const introT = travel(clamp(state.q, 0, 1));
         const p = Math.max(0, state.q - 1);
-        const grow = 1 + (FOCUS_GROW - 1) * introT;
+        const progress = n > 1 ? p / (n - 1) : 0;
+        const grow = (1 + (FOCUS_GROW - 1) * introT) * (1 + (IMMERSE_GROW - 1) * progress);
         const cw = cardW * grow;
         const chh = cardH * grow;
         const cardY = CARD_Y + (CARD_Y_FOCUS - CARD_Y) * introT;
@@ -459,7 +506,7 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
             link.style.height = `${chh}px`;
           }
           if (x > W + ox + 40 || x + cw < -ox - 40) return;
-          drawCard(drawCtx, item, j, x, y, cw, chh, dark);
+          drawCard(drawCtx, item, j, x, y, cw, chh, dark, dpr, hover.current.idx === j ? hover.current.t : 0);
         });
         if (lens) lens.draw(target, focus, 1 - cardY, cw / 2 / W + LENS.flatPad); // GL's y runs bottom-up
         const a = clamp(Math.round(p), 0, n - 1);
@@ -540,6 +587,15 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
     }, info);
     return () => ctx.revert();
   }, [active, reduced]);
+  // Hovering the centred card: its UI elements twist out (springy); leaving settles them back.
+  const popOut = (i: number) => {
+    if (reduced || i !== activeRef.current) return;
+    hover.current.idx = i;
+    gsap.to(hover.current, { t: 1, duration: DUR.slow, ease: EASE.spring, overwrite: true });
+  };
+  const popIn = () => { gsap.to(hover.current, { t: 0, duration: DUR.base, ease: EASE.out, overwrite: true }); };
+  useEffect(() => { popIn(); }, [active]); // moving to another project settles the last one
+
   // Side card click brings it into focus; the focused card opens the case study.
   const onCardClick = (k: number) => (e: React.MouseEvent) => {
     if (k === active) return;
@@ -588,6 +644,8 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
           ref={(el) => { links.current[i] = el; }}
           onClick={onCardClick(i)}
           onFocus={() => { if (i !== activeRef.current) goTo(i); }}
+          onMouseEnter={() => popOut(i)}
+          onMouseLeave={() => popIn()}
         />
       ))}
       <div ref={info} className="ghome-info" aria-live="polite">
