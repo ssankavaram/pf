@@ -21,14 +21,8 @@ const GAP = 0.06;            // space between cards, × screen width
 const ANGLE = 34;            // how far side cards turn (deg); outer edges come toward you, like the inside of a cylinder
 const DEPTH = 140;           // how far side cards sit back (px)
 const SIDE_SCALE = 0.91;     // size of the neighbours relative to the focused card
-// Soft glow colour per card (cycled), and the background blobs
+// Soft glow colour per card (cycled)
 const TINTS = ["#5183f5", "#f58bd0", "#7fd9a8", "#a78bfa", "#ffb86b"];
-const BLOBS = [
-  { c: "#f7a8d8", x: 0.12, y: 0.62, r: 0.32 },
-  { c: "#a9c1ff", x: 0.72, y: 0.3, r: 0.36 },
-  { c: "#b9f0d4", x: 0.88, y: 0.78, r: 0.26 },
-  { c: "#d7c2ff", x: 0.42, y: 0.92, r: 0.3 },
-];
 /* ------------------------------------------------------------------------ */
 
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
@@ -62,7 +56,6 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
   const root = useRef<HTMLElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const cards = useRef<(HTMLAnchorElement | null)[]>([]);
-  const blobs = useRef<(HTMLDivElement | null)[]>([]);
   const intro = useRef<HTMLDivElement>(null);
   const trigger = useRef<ScrollTrigger | null>(null);
   const activeRef = useRef(0);
@@ -95,10 +88,6 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
         card.style.setProperty("--sheen", `${(50 - clamp(d, -1.5, 1.5) * 45).toFixed(1)}%`); // light sweeps as it turns
         card.classList.toggle("is-active", ad < 0.5);
       });
-      // Background glows drift the other way, a little: depth.
-      blobs.current.forEach((b, k) => {
-        if (b) b.style.transform = `translate3d(${(-p * (18 + k * 10)).toFixed(1)}px, 0, 0)`;
-      });
       const a = clamp(Math.round(p), 0, n - 1);
       if (a !== activeRef.current) { activeRef.current = a; setActive(a); }
     };
@@ -128,13 +117,7 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
       const parts = intro.current ? Array.from(intro.current.children) : [];
       gsap.from(parts, { y: 18, opacity: 0, duration: DUR.slow, ease: EASE.out, stagger: 0.08, delay: 0.1 });
       gsap.from(stage.current, { y: 40, opacity: 0, duration: DUR.slow, ease: EASE.out, delay: 0.3 });
-
-      // Glows float slowly on their own.
-      const drift = blobs.current.map((b, k) => b && gsap.to(b.firstElementChild, {
-        x: gsap.utils.random(-60, 60), y: gsap.utils.random(-40, 40), scale: gsap.utils.random(0.9, 1.15),
-        duration: gsap.utils.random(7, 11), ease: EASE.drift, repeat: -1, yoyo: true, delay: k * 0.6,
-      }));
-      return () => { trigger.current = null; drift.forEach((t) => t?.kill()); };
+      return () => { trigger.current = null; };
     });
     mm.add("(prefers-reduced-motion: reduce)", () => { setReduced(true); });
     return () => mm.revert();
@@ -154,17 +137,6 @@ export default function GlassHome({ name, bio, currently, items }: Props) {
 
   return (
     <section ref={root} id="top" className={`ghome${reduced ? " is-static" : ""}`} aria-label="Selected work">
-      <div className="ghome-blobs" aria-hidden>
-        {BLOBS.map((b, k) => (
-          <div key={k} ref={(el) => { blobs.current[k] = el; }} className="ghome-blob-wrap">
-            <div
-              className="ghome-blob"
-              style={{ left: `${b.x * 100}%`, top: `${b.y * 100}%`, width: `${b.r * 100}vw`, height: `${b.r * 100}vw`, background: b.c }}
-            />
-          </div>
-        ))}
-      </div>
-
       <div ref={intro} className="ghome-intro">
         <h1 className="ghome-name">{name}</h1>
         <p className="ghome-bio">{bio}</p>

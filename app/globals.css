@@ -371,9 +371,6 @@ a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
   position: relative; height: 100svh; overflow: hidden; background: var(--bg);
   display: flex; flex-direction: column;
 }
-.ghome-blobs { position: absolute; inset: 0; pointer-events: none; }
-.ghome-blob-wrap { position: absolute; inset: 0; will-change: transform; }
-.ghome-blob { position: absolute; border-radius: 50%; transform: translate(-50%, -50%); filter: blur(70px); opacity: 0.55; will-change: transform; }
 .ghome-intro {
   position: relative; z-index: 2; width: min(615px, calc(100% - 2 * var(--gutter)));
   margin-left: max(var(--gutter), calc(44.5vw - var(--card-w) / 2)); padding-top: clamp(96px, 15svh, 136px);
