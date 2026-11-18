@@ -181,7 +181,7 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
           if (x > W + ox + 40 || x + cw < -ox - 40) return;
           drawCard(drawCtx, img, x, y, cw, chh, f);
         });
-        if (lens) lens.draw(target, focus, 1 - cardY, cw * 0.42 / W + LENS.flatPad); // GL's y runs bottom-up
+        if (lens) lens.draw(target, focus, 1 - cardY, Math.max(LENS.flat, cw * 0.5 / W)); // flat middle, bends toward the screen edges // GL's y runs bottom-up
 
         const a = clamp(Math.round(p), 0, n - 1);
         if (a !== activeRef.current) { activeRef.current = a; setActive(a); }

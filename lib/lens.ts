@@ -3,15 +3,15 @@
 // The scene is drawn into a 2D canvas first; this WebGL pass bends it.
 
 export const LENS = {
-  bend: 0.14,     // how much taller things get at the edges (vertical magnify)
-  squeeze: 0.04,  // how much they compress sideways at the edges
-  flatPad: 0.0,   // extra flat zone beyond the focused card's own edges (× screen width)
-  span: 0.34,     // how wide the bending zone is (× screen width)
-  corner: 0.25,   // extra bend + blur toward the top/bottom corners
-  aberr: 0.95,    // rainbow: how far red and blue split apart at the edges
-  blur: 0.004,    // slight softening at the edges (× screen width)
-  sheen: 0.13,    // soft rainbow tint over the curved glass
-  haze: 0.15,     // glow toward the far edges
+  flat: 0.27,     // half-width of the flat middle of the screen (× width) — the lens is fixed to the screen
+  span: 0.25,     // the bend ramps up from there to the screen edge
+  bend: 0.55,     // how much taller cards get at the screen edge (vertical flare)
+  squeeze: 0.05,  // how much they compress sideways at the edges
+  corner: 0.3,    // a little extra flare toward the top/bottom corners
+  aberr: 0.3,     // rainbow: how far the spectrum spreads along the flared edges
+  blur: 0.006,    // slight sideways smear at the edges
+  sheen: 0.1,     // faint rainbow wash over the curve
+  haze: 0.1,      // glow toward the far edges
   overscan: 0.22, // the scene is drawn this far past each screen edge (× width) so the lens always has content to bend in
 };
 
@@ -43,26 +43,32 @@ vec3 samp(vec2 uv) {
   return texture2D(tex, s).rgb;
 }
 vec3 rainbow(float t) { return 0.5 + 0.5 * cos(6.2832 * (t + vec3(0.0, 0.33, 0.67))); }
+// Smooth spectrum weight for t in 0..1 (red → violet), so colours fan out continuously instead of 3 ghost copies.
+vec3 spectrum(float t) {
+  vec3 c;
+  c.r = clamp(1.0 - abs(t * 4.0 - 0.5) * 0.9, 0.0, 1.0) + clamp(t * 4.0 - 3.2, 0.0, 1.0) * 0.6; // red at the start, a touch of violet at the end
+  c.g = clamp(1.0 - abs(t * 4.0 - 1.8) * 0.8, 0.0, 1.0);
+  c.b = clamp(1.0 - abs(t * 4.0 - 3.0) * 0.8, 0.0, 1.0);
+  return c;
+}
 void main() {
   float e = edge(vUv);
   float ee = e * e;
-  float ab = aberr * ee;               // red/blue bend more/less than green: rainbow fringes
-  float bw = blur * ee;                // out of focus toward the sides and corners
+  float bw = blur * ee;
   vec3 col = vec3(0.0);
-  // 12-tap spiral blur (soft, round bokeh-like falloff)
-  for (int i = 0; i < 12; i++) {
-    float fi = float(i);
-    float r = sqrt((fi + 0.5) / 12.0);
-    float a = fi * 2.39996;
-    vec2 o = vec2(cos(a), sin(a) * aspect) * r * bw;
-    col.r += samp(warp(vUv + o, 1.0 + ab)).r;
-    col.g += samp(warp(vUv + o, 1.0)).g;
-    col.b += samp(warp(vUv + o, 1.0 - ab)).b;
+  vec3 wsum = vec3(0.0);
+  for (int i = 0; i < 14; i++) {
+    float t = (float(i) + 0.5) / 14.0;
+    vec3 w = spectrum(t);
+    float k = 1.0 + aberr * ee * (t - 0.5) * 2.0;   // each colour flares a slightly different amount
+    vec2 o = vec2((t - 0.5) * bw, 0.0);
+    col += samp(warp(vUv + o, k)) * w;
+    wsum += w;
   }
-  col /= 12.0;
+  col /= wsum;
   float onCard = smoothstep(0.0, 0.05, distance(col, bg)); // glow + tint only on cards, never the empty background
   col = mix(col, hazeCol, haze * ee * e * onCard);
-  col += rainbow(vUv.y * 1.3 + vUv.x * 0.6) * sheen * ee * onCard; // light rainbow wash over the curve
+  col += rainbow((vUv.y - cy) * 1.8 + abs(vUv.x - cx) * 0.8) * sheen * ee * onCard; // rainbow runs up the flared edges
   gl_FragColor = vec4(col, 1.0);
 }`;
 
