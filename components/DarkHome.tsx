@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { DUR, EASE, SCRUB, scrollToY, glideToY } from "@/lib/motion";
+import { DUR, EASE, SCRUB, scrollToY } from "@/lib/motion";
 import { LENS, makeLens } from "@/lib/lens";
 import Fluted from "./Fluted";
 import ContactIcons from "./ContactIcons";
@@ -21,11 +21,6 @@ export type HomeItem = {
 /* ---- Tuning knobs ------------------------------------------------------- */
 const INTRO_SCROLL = 0.6;     // screen-heights of scrolling to clear the nav + intro and bring the cards to centre
 const CAPTION_FADE = 0.12;  // captions fade out over this much of the screen width as their card curves away
-const WHEEL_SCALE = 0.55;  // how far a swipe travels (lower = more scrolling per card)
-const GLIDE = 0.06;         // glide smoothing toward the card (lower = slower, softer)
-const SNAP_LEAN = 0.15;     // scroll this far toward the next card (0–1) and it goes there
-const SNAP_DUR = 0.6;       // glide time when a touch/scrollbar scroll settles between cards (s)
-const WHEEL_PAUSE = 160;    // ms without wheel input that ends a swipe (so trackpad momentum can't skip cards)
 const SCROLL_PER_CARD = 0.8;  // screen-heights of scrolling to move one card
 const CARD_RATIO = 780 / 437; // design cards (Figma node 64:4687)
 const DRIFT_ZOOM = 0.06;      // the focused card's gradient zooms in this much so it has room to drift
@@ -250,87 +245,12 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
       if (n > 1) tl.to(state, { q: n, ease: "none", duration: SCROLL_PER_CARD * (n - 1) });
       trigger.current = tl.scrollTrigger ?? null;
 
-      // Snap: when scrolling stops partway between cards, glide to a card (or back to the intro).
-      // Leans toward the way you were scrolling, so a small push still moves on to the next card.
-      const stops = [0, ...items.map((_, k) => INTRO_SCROLL + k * SCROLL_PER_CARD)];
-      const span = INTRO_SCROLL + SCROLL_PER_CARD * Math.max(1, n - 1);
-      let lastY = window.scrollY, dir = 0;
-      const onScroll = () => { const y = window.scrollY; if (y !== lastY) dir = Math.sign(y - lastY); lastY = y; };
-      window.addEventListener("scroll", onScroll, { passive: true });
-      const snap = () => {
-        const st = trigger.current;
-        if (!st || performance.now() - lastWheel < 1200) return; // the wheel handler already landed it
-        const y = window.scrollY;
-        if (y <= st.start + 2 || y >= st.end - 2) return; // outside the carousel
-        const pos = ((y - st.start) / (st.end - st.start)) * span;
-        let i = stops.findIndex((s) => s > pos) - 1; // stop just before
-        if (i < 0) i = stops.length - 2;
-        const a = stops[i], b = stops[i + 1];
-        const t = (pos - a) / (b - a);
-        const target = dir > 0 ? (t > SNAP_LEAN ? b : a) : dir < 0 ? (t < 1 - SNAP_LEAN ? a : b) : (t < 0.5 ? a : b);
-        const ty = st.start + (target / span) * (st.end - st.start);
-        if (Math.abs(ty - y) > 2) scrollToY(ty, undefined, SNAP_DUR);
-      };
-      ScrollTrigger.addEventListener("scrollEnd", snap);
-
-      // Wheel / trackpad inside the carousel: scroll as fast as you like, but always land on a card.
-      // Each swipe's full travel (including trackpad momentum) is added up and projected forward; the
-      // carousel glides straight to the card that travel points at, retargeting as the swipe goes on.
-      // So a light swipe moves one card, a hard flick several, and it never stops between two.
-      const stopY = (i: number, st: ScrollTrigger) => st.start + (stops[i] / span) * (st.end - st.start);
-      const nearest = (y: number, st: ScrollTrigger) => {
-        let k = 0;
-        stops.forEach((_, i) => { if (Math.abs(stopY(i, st) - y) < Math.abs(stopY(k, st) - y)) k = i; });
-        return k;
-      };
-      let lastT = -1e9, lastMag = 0, virt = 0, aim = -1, base0 = 0, passThrough = false, lastWheel = -1e9;
-      const onWheel = (e: WheelEvent) => {
-        const st = trigger.current;
-        if (!st || e.ctrlKey || Math.abs(e.deltaY) < Math.abs(e.deltaX)) return; // pinch-zoom, sideways
-        const now = e.timeStamp, mag = Math.abs(e.deltaY), gap = now - lastT;
-        const fresh = (gap > WHEEL_PAUSE && mag >= lastMag * 0.9) || gap > 450; // a new swipe, not fading momentum
-        lastT = now; lastMag = mag;
-        const y = window.scrollY, d = Math.sign(e.deltaY);
-        if (fresh) {
-          passThrough = false;
-          if (y < st.start - 2 || y > st.end + 2) { passThrough = true; return; } // outside the carousel
-          const gliding = aim >= 0 && Math.abs(stopY(aim, st) - y) > 2;
-          const base = gliding ? aim : nearest(y, st);
-          if ((d > 0 && base === stops.length - 1) || (d < 0 && base === 0)) { passThrough = true; return; } // scroll on out
-          aim = base;
-          base0 = base;
-          virt = stopY(base, st);
-        }
-        if (passThrough) return;
-        e.preventDefault();
-        e.stopImmediatePropagation(); // Lenis would scroll too
-        virt += e.deltaY * WHEEL_SCALE;
-        lastWheel = performance.now();
-        // where the swipe points, in cards (fractional), then round toward the swipe's direction
-        let fi = 0;
-        for (let i = 0; i < stops.length - 1; i++) {
-          const a0 = stopY(i, st), a1 = stopY(i + 1, st);
-          if (virt >= a1) fi = i + 1;
-          else if (virt > a0) { fi = i + (virt - a0) / (a1 - a0); break; }
-        }
-        // A small push is enough for the first card; each card after that needs another half card of
-        // travel, so the fading end of a swipe can't carry you past the card you were aiming for.
-        const moved = (fi - base0) * d;
-        const steps = moved < SNAP_LEAN ? 0 : Math.max(1, Math.round(moved));
-        const goal = Math.max(0, Math.min(stops.length - 1, base0 + steps * d));
-        if (goal !== aim || Math.abs(stopY(goal, st) - y) > 2) { aim = goal; glideToY(stopY(goal, st), GLIDE); }
-      };
-      window.addEventListener("wheel", onWheel, { passive: false, capture: true });
-
       // Entrance
       gsap.from(".dhome-intro > *", { y: 16, opacity: 0, duration: DUR.slow, ease: EASE.out, stagger: 0.08, delay: 0.1 });
       gsap.from(out, { opacity: 0, duration: DUR.slow, ease: EASE.out, delay: 0.25 });
 
       return () => {
         trigger.current = null;
-        ScrollTrigger.removeEventListener("scrollEnd", snap);
-        window.removeEventListener("wheel", onWheel, { capture: true });
-        window.removeEventListener("scroll", onScroll);
         gsap.ticker.remove(tick);
         ro.disconnect();
         io.disconnect();
