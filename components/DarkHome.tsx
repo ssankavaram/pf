@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { DUR, EASE, SCRUB, STAGGER, scrollToY } from "@/lib/motion";
+import { DUR, EASE, SCRUB, scrollToY, glideToY } from "@/lib/motion";
 import { LENS, makeLens } from "@/lib/lens";
 import Fluted from "./Fluted";
 import ContactIcons from "./ContactIcons";
@@ -19,8 +19,9 @@ export type HomeItem = {
 
 /* ---- Tuning knobs ------------------------------------------------------- */
 const INTRO_SCROLL = 0.6;     // screen-heights of scrolling to clear the nav + intro and bring the cards to centre
-const SNAP_LEAN = 0.2;      // scroll this far toward the next card (0–1) and it snaps there
-const SNAP_DUR = 0.8;       // how long the glide to the next card takes (s)
+const CAPTION_FADE = 0.12;  // captions fade out over this much of the screen width as their card curves away
+const SNAP_LEAN = 0.15;     // scroll this far toward the next card (0–1) and it goes there
+const SNAP_DUR = 0.6;       // glide time when a touch/scrollbar scroll settles between cards (s)
 const WHEEL_PAUSE = 160;    // ms without wheel input that ends a swipe (so trackpad momentum can't skip cards)
 const SCROLL_PER_CARD = 0.8;  // screen-heights of scrolling to move one card
 const CARD_RATIO = 780 / 437; // design cards (Figma node 64:4687)
@@ -87,7 +88,7 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
   const root = useRef<HTMLElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const intro = useRef<HTMLDivElement>(null);
-  const info = useRef<HTMLDivElement>(null);
+  const caps = useRef<(HTMLDivElement | null)[]>([]);
   const links = useRef<(HTMLAnchorElement | null)[]>([]);
   const trigger = useRef<ScrollTrigger | null>(null);
   const activeRef = useRef(0);
@@ -183,15 +184,21 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
 
         const a = clamp(Math.round(p), 0, n - 1);
         if (a !== activeRef.current) { activeRef.current = a; setActive(a); }
-        // Name, line and tags under the centred card; fade between cards.
-        if (info.current) {
-          const settle = 1 - travel(clamp(Math.abs(p - a) / 0.35, 0, 1));
-          info.current.style.left = `${focus * W - cw / 2}px`;
-          info.current.style.width = `${cw}px`;
-          info.current.style.top = `${cy + chh / 2 + 16}px`;
-          info.current.style.opacity = settle.toFixed(3);
-          info.current.style.visibility = settle > 0.02 ? "visible" : "hidden";
-        }
+        // Every card carries its own caption underneath; it slides with the card and fades out
+        // as the card moves into the curved edges of the glass.
+        const r0 = Math.max(LENS.flat, cw * 0.5 / W) * W; // half-width of the flat middle (px)
+        const fadeZone = W * CAPTION_FADE;
+        items.forEach((_, j) => {
+          const c = caps.current[j];
+          if (!c) return;
+          const x = focus * W + (j - p) * spacing - cw / 2;
+          const inFlat = Math.min(x - (focus * W - r0), focus * W + r0 - (x + cw)); // how far inside the flat middle
+          const o = clamp(1 + inFlat / fadeZone, 0, 1) * introT;
+          c.style.transform = `translate3d(${x}px, ${cy + chh / 2 + 16}px, 0)`;
+          c.style.width = `${cw}px`;
+          c.style.opacity = o.toFixed(3);
+          c.style.visibility = o > 0.01 ? "visible" : "hidden";
+        });
       };
 
       size();
@@ -242,33 +249,46 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
       };
       ScrollTrigger.addEventListener("scrollEnd", snap);
 
-      // Wheel / trackpad inside the carousel: one swipe = one card, so you never stop halfway.
-      // Trackpad momentum keeps firing wheel events after a swipe; they're swallowed until there's
-      // a short pause (or a clearly new, harder flick), so one swipe never skips two cards.
-      let busy = false, armed = true, lastT = 0, lastMag = 0;
+      // Wheel / trackpad inside the carousel: scroll as fast as you like, but always land on a card.
+      // Each swipe's full travel (including trackpad momentum) is added up and projected forward; the
+      // carousel glides straight to the card that travel points at, retargeting as the swipe goes on.
+      // So a light swipe moves one card, a hard flick several, and it never stops between two.
+      const stopY = (i: number, st: ScrollTrigger) => st.start + (stops[i] / span) * (st.end - st.start);
+      const nearest = (y: number, st: ScrollTrigger) => {
+        let k = 0;
+        stops.forEach((_, i) => { if (Math.abs(stopY(i, st) - y) < Math.abs(stopY(k, st) - y)) k = i; });
+        return k;
+      };
+      let lastT = -1e9, lastMag = 0, virt = 0, aim = -1, passThrough = false;
       const onWheel = (e: WheelEvent) => {
         const st = trigger.current;
         if (!st || e.ctrlKey || Math.abs(e.deltaY) < Math.abs(e.deltaX)) return; // pinch-zoom, sideways
-        const y = window.scrollY;
-        if (y < st.start - 2 || y > st.end + 2) return; // outside the carousel: scroll normally
-        const pos = ((y - st.start) / (st.end - st.start)) * span;
-        let cur = 0;
-        stops.forEach((s, i) => { if (Math.abs(s - pos) < Math.abs(stops[cur] - pos)) cur = i; });
-        const d = Math.sign(e.deltaY);
-        if (!busy && ((d > 0 && cur === stops.length - 1) || (d < 0 && cur === 0))) return; // leave the carousel normally
-        e.preventDefault();
-        e.stopImmediatePropagation(); // keep Lenis from also scrolling
-        const now = e.timeStamp, mag = Math.abs(e.deltaY); // when the event happened, even if the page was busy
-        const gap = now - lastT;
-        // a new swipe (never mid-glide): after a pause (unless it's still fading momentum), after a long pause, or a sudden harder flick
-        if (!busy && ((gap > WHEEL_PAUSE && mag >= lastMag * 0.9) || gap > 450 || (mag > lastMag * 1.5 && mag > 15))) armed = true;
+        const now = e.timeStamp, mag = Math.abs(e.deltaY), gap = now - lastT;
+        const fresh = (gap > WHEEL_PAUSE && mag >= lastMag * 0.9) || gap > 450; // a new swipe, not fading momentum
         lastT = now; lastMag = mag;
-        if (busy || !armed || mag < 2) return;
-        armed = false;
-        busy = true;
-        const next = Math.max(0, Math.min(stops.length - 1, cur + d));
-        const release = window.setTimeout(() => { busy = false; }, SNAP_DUR * 1000 + 150); // in case the glide is interrupted
-        scrollToY(st.start + (stops[next] / span) * (st.end - st.start), () => { busy = false; clearTimeout(release); }, SNAP_DUR);
+        const y = window.scrollY, d = Math.sign(e.deltaY);
+        if (fresh) {
+          passThrough = false;
+          if (y < st.start - 2 || y > st.end + 2) { passThrough = true; return; } // outside the carousel
+          const gliding = aim >= 0 && Math.abs(stopY(aim, st) - y) > 2;
+          const base = gliding ? aim : nearest(y, st);
+          if ((d > 0 && base === stops.length - 1) || (d < 0 && base === 0)) { passThrough = true; return; } // scroll on out
+          aim = base;
+          virt = stopY(base, st);
+        }
+        if (passThrough) return;
+        e.preventDefault();
+        e.stopImmediatePropagation(); // Lenis would scroll too
+        virt += e.deltaY;
+        // where the swipe points, in cards (fractional), then round toward the swipe's direction
+        let fi = 0;
+        for (let i = 0; i < stops.length - 1; i++) {
+          const a0 = stopY(i, st), a1 = stopY(i + 1, st);
+          if (virt >= a1) fi = i + 1;
+          else if (virt > a0) { fi = i + (virt - a0) / (a1 - a0); break; }
+        }
+        const goal = Math.max(0, Math.min(stops.length - 1, d > 0 ? Math.ceil(fi - SNAP_LEAN) : Math.floor(fi + SNAP_LEAN)));
+        if (goal !== aim || Math.abs(stopY(goal, st) - y) > 2) { aim = goal; glideToY(stopY(goal, st)); }
       };
       window.addEventListener("wheel", onWheel, { passive: false, capture: true });
 
@@ -292,15 +312,6 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
     mm.add("(prefers-reduced-motion: reduce)", () => { setReduced(true); });
     return () => mm.revert();
   }, [items, n]);
-
-  // When a card centres: its line and tags rise in, one after another.
-  useEffect(() => {
-    if (reduced) return;
-    const ctx = gsap.context(() => {
-      gsap.fromTo(".dhome-line, .dhome-tags li", { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: DUR.base, ease: EASE.out, stagger: STAGGER });
-    }, info);
-    return () => ctx.revert();
-  }, [active, reduced]);
 
   const goTo = (k: number) => {
     const st = trigger.current;
@@ -371,9 +382,11 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
           onFocus={() => { if (i !== activeRef.current) goTo(i); }}
         />
       ))}
-      <div ref={info} className="dhome-info" aria-live="polite">
-        {items[active] && caption(items[active])}
-      </div>
+      {items.map((p, i) => (
+        <div key={p.slug} ref={(el) => { caps.current[i] = el; }} className="dhome-info" aria-hidden={i !== active}>
+          {caption(p)}
+        </div>
+      ))}
     </section>
   );
 }

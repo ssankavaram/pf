@@ -563,7 +563,7 @@ html { background: var(--mist); }
 .dhome-hit { position: absolute; left: 0; top: 0; z-index: 3; border-radius: 12px; will-change: transform; }
 .dhome-hit:focus-visible { outline: none; }
 .dhome-widget { --k: 1; position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none; will-change: transform, opacity; }
-.dhome-info { position: absolute; left: 0; top: 0; z-index: 4; visibility: hidden; }
+.dhome-info { position: absolute; left: 0; top: 0; z-index: 4; visibility: hidden; will-change: transform, opacity; }
 .dhome-line { width: max-content; max-width: min(calc(100% + 160px), calc(100vw - 2 * var(--gutter))); font-size: 16px; line-height: 1.6; color: var(--ink); } /* may run a little past the card to stay on one line */
 .dhome-line .is-muted { color: rgba(217, 217, 217, 0.61); }
 .dhome-tags { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 14px; }

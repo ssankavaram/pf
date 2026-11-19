@@ -27,3 +27,8 @@ export function scrollToY(y: number, onComplete?: () => void, duration = 1.2) {
   if (lenis) lenis.scrollTo(y, { duration, onComplete: () => onComplete?.() });
   else { window.scrollTo({ top: y }); onComplete?.(); }
 }
+/** Ease toward a position with Lenis's smoothing; calling again mid-glide just retargets it smoothly. */
+export function glideToY(y: number, lerp = 0.09) {
+  if (lenis) lenis.scrollTo(y, { lerp });
+  else window.scrollTo({ top: y });
+}
