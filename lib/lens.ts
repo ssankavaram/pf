@@ -5,10 +5,10 @@
 export const LENS = {
   flat: 0.27,     // half-width of the flat middle of the screen (× width) — the lens is fixed to the screen
   span: 0.25,     // the bend ramps up from there to the screen edge
-  bend: 0.55,     // how much taller cards get at the screen edge (vertical flare)
-  squeeze: 0.05,  // how much they compress sideways at the edges
-  corner: 0.3,    // a little extra flare toward the top/bottom corners
-  aberr: 0.3,     // rainbow: how far the spectrum spreads along the flared edges
+  bend: 0.3,      // how much taller cards get at the screen edge (vertical flare)
+  squeeze: 0.03,  // how much they compress sideways at the edges
+  corner: 0.15,   // a little extra flare toward the top/bottom corners
+  aberr: 0.22,    // rainbow: how far the spectrum spreads along the flared edges
   blur: 0.006,    // slight sideways smear at the edges
   sheen: 0.1,     // faint rainbow wash over the curve
   haze: 0.1,      // glow toward the far edges

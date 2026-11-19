@@ -145,8 +145,8 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
         out.height = Math.round(H * dpr);
         src.width = Math.round(W * (1 + 2 * LENS.overscan) * dpr);
         src.height = Math.round(H * dpr);
-        cardW = Math.min(1040, 0.62 * W, 0.6 * H * CARD_RATIO); // big: the focused card fills most of the screen
-        if (W < 810) cardW = 0.86 * W;
+        cardW = Math.min(920, 0.55 * W, 0.53 * H * CARD_RATIO); // the focused card, with breathing room around it
+        if (W < 810) cardW = 0.82 * W;
         cardH = cardW / CARD_RATIO;
         if (intro.current) introBottom = intro.current.offsetTop + intro.current.offsetHeight;
         document.documentElement.style.setProperty("--col", `${Math.round(cardW)}px`);
