@@ -20,6 +20,8 @@ export type HomeItem = {
 /* ---- Tuning knobs ------------------------------------------------------- */
 const INTRO_SCROLL = 0.6;     // screen-heights of scrolling to clear the nav + intro and bring the cards to centre
 const CAPTION_FADE = 0.12;  // captions fade out over this much of the screen width as their card curves away
+const WHEEL_SCALE = 0.55;  // how far a swipe travels (lower = more scrolling per card)
+const GLIDE = 0.06;         // glide smoothing toward the card (lower = slower, softer)
 const SNAP_LEAN = 0.15;     // scroll this far toward the next card (0–1) and it goes there
 const SNAP_DUR = 0.6;       // glide time when a touch/scrollbar scroll settles between cards (s)
 const WHEEL_PAUSE = 160;    // ms without wheel input that ends a swipe (so trackpad momentum can't skip cards)
@@ -235,7 +237,7 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
       window.addEventListener("scroll", onScroll, { passive: true });
       const snap = () => {
         const st = trigger.current;
-        if (!st) return;
+        if (!st || performance.now() - lastWheel < 1200) return; // the wheel handler already landed it
         const y = window.scrollY;
         if (y <= st.start + 2 || y >= st.end - 2) return; // outside the carousel
         const pos = ((y - st.start) / (st.end - st.start)) * span;
@@ -259,7 +261,7 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
         stops.forEach((_, i) => { if (Math.abs(stopY(i, st) - y) < Math.abs(stopY(k, st) - y)) k = i; });
         return k;
       };
-      let lastT = -1e9, lastMag = 0, virt = 0, aim = -1, passThrough = false;
+      let lastT = -1e9, lastMag = 0, virt = 0, aim = -1, base0 = 0, passThrough = false, lastWheel = -1e9;
       const onWheel = (e: WheelEvent) => {
         const st = trigger.current;
         if (!st || e.ctrlKey || Math.abs(e.deltaY) < Math.abs(e.deltaX)) return; // pinch-zoom, sideways
@@ -274,12 +276,14 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
           const base = gliding ? aim : nearest(y, st);
           if ((d > 0 && base === stops.length - 1) || (d < 0 && base === 0)) { passThrough = true; return; } // scroll on out
           aim = base;
+          base0 = base;
           virt = stopY(base, st);
         }
         if (passThrough) return;
         e.preventDefault();
         e.stopImmediatePropagation(); // Lenis would scroll too
-        virt += e.deltaY;
+        virt += e.deltaY * WHEEL_SCALE;
+        lastWheel = performance.now();
         // where the swipe points, in cards (fractional), then round toward the swipe's direction
         let fi = 0;
         for (let i = 0; i < stops.length - 1; i++) {
@@ -287,8 +291,12 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
           if (virt >= a1) fi = i + 1;
           else if (virt > a0) { fi = i + (virt - a0) / (a1 - a0); break; }
         }
-        const goal = Math.max(0, Math.min(stops.length - 1, d > 0 ? Math.ceil(fi - SNAP_LEAN) : Math.floor(fi + SNAP_LEAN)));
-        if (goal !== aim || Math.abs(stopY(goal, st) - y) > 2) { aim = goal; glideToY(stopY(goal, st)); }
+        // A small push is enough for the first card; each card after that needs another half card of
+        // travel, so the fading end of a swipe can't carry you past the card you were aiming for.
+        const moved = (fi - base0) * d;
+        const steps = moved < SNAP_LEAN ? 0 : Math.max(1, Math.round(moved));
+        const goal = Math.max(0, Math.min(stops.length - 1, base0 + steps * d));
+        if (goal !== aim || Math.abs(stopY(goal, st) - y) > 2) { aim = goal; glideToY(stopY(goal, st), GLIDE); }
       };
       window.addEventListener("wheel", onWheel, { passive: false, capture: true });
 
