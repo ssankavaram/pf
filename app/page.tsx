@@ -1,6 +1,6 @@
 import GlassNav from "@/components/GlassNav";
 import DarkHome, { type HomeItem } from "@/components/DarkHome";
-import RippleFooter from "@/components/RippleFooter";
+import CollabFooter from "@/components/CollabFooter";
 import { projects, site } from "@/lib/content";
 
 export default function Home() {
@@ -19,7 +19,7 @@ export default function Home() {
       <main className="page">
         <DarkHome name={site.name} bio={site.bio} currently={site.currently} nav={site.nav} items={items} />
       </main>
-      <RippleFooter nav={site.nav} />
+      <CollabFooter nav={site.nav} />
     </>
   );
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import GlassNav from "@/components/GlassNav";
 import About from "@/components/About";
-import RippleFooter from "@/components/RippleFooter";
+import CollabFooter from "@/components/CollabFooter";
 import { site } from "@/lib/content";
 
 export const metadata: Metadata = {
@@ -16,7 +16,7 @@ export default function AboutPage() {
       <main className="page">
         <About title={site.about.title} bio={site.bio} />
       </main>
-      <RippleFooter nav={site.nav} />
+      <CollabFooter nav={site.nav} />
     </>
   );
 }

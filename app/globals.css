@@ -149,7 +149,7 @@ a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
 .nav-cta:hover { transform: scale(1.04); background: var(--orange); }
 
 /* Content layer that slides up to reveal the footer */
-.page { position: relative; z-index: 1; background: var(--bg); border-radius: 0 0 64px 64px; overflow: clip; box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35); }
+.page { position: relative; z-index: 1; background: var(--bg); overflow: clip; } /* slides up off the footer to reveal it */
 
 /* Hero: statement + sideways-scrolling project row */
 .hs { height: 100svh; display: flex; flex-direction: column; gap: clamp(32px, 5svh, 48px); padding: clamp(40px, 7svh, 64px) 0 32px; overflow: hidden; }
@@ -394,7 +394,6 @@ a:hover .ulink, .ulink:hover { background-size: 100% 1px; }
     radial-gradient(70% 90% at 88% 22%, color-mix(in srgb, var(--tint) 45%, transparent), transparent 70%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
 }
-:root[data-theme="dark"] .page { box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6); }
 
 /* Dock: circles bottom right */
 .gdock { position: fixed; z-index: 100; right: var(--gutter); bottom: calc(56px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 24px; }
@@ -593,27 +592,37 @@ html { background: var(--mist); }
 .hw-chips span.is-tint { background: #f7f9fd; }
 
 /* Footer: fractal glass that ripples where the cursor moves (RippleFooter.tsx) */
-.rfooter { position: sticky; bottom: 0; z-index: 0; height: 244px; overflow: hidden; background: #232323; color: var(--ink); }
-.rfooter-fluted { inset: 0; width: 100%; height: 100%; }
-.rfooter-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; transition: opacity var(--dur-base) var(--ease-out); }
-.rfooter.is-gl .rfooter-canvas { opacity: 1; }
-.rfooter.is-gl .rfooter-fluted { visibility: hidden; }
-.rfooter-content { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 26px; padding: 46px var(--gutter) 0; pointer-events: none; }
-.rfooter-content > * { pointer-events: auto; width: max-content; }
-.rfooter-thanks { font-size: 16px; line-height: 1.6; }
-.rfooter-links { display: flex; gap: 24px; font-size: 16px; line-height: 1.6; }
-.rfooter-links a, .rfooter-links span { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
-.rfooter-links span { cursor: default; }
-.rfooter-links a:hover { opacity: 0.75; }
-.rfooter-top { position: absolute; z-index: 1; right: var(--gutter); top: 59px; font-size: 16px; line-height: 1.6; color: rgba(244, 239, 230, 0.5); transition: color var(--dur-fast) var(--ease-out); }
-.rfooter-top:hover { color: var(--ink); }
 
 @media (max-width: 809px) {
   .gnav { gap: 12px; }
   .gnav-link { font-size: 14px; }
   .dhome-tags { gap: 8px; }
-  .rfooter { height: 300px; }
-  .rfooter-top { top: auto; bottom: 24px; }
+}
+
+/* Footer: "Let's work together!" with drifting name tags (Figma 64:4880). Revealed as the page slides up. */
+.cfooter { position: sticky; bottom: 0; z-index: 0; height: 265px; overflow: hidden; background: #232323; color: var(--ink); font-size: 16px; line-height: 1.6; letter-spacing: -0.02em; }
+.cfooter-main { position: absolute; left: 50%; top: 94px; transform: translateX(-50%); z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 19px; }
+.cfooter-title { white-space: nowrap; }
+.cfooter-side { position: absolute; z-index: 1; top: 21px; right: var(--gutter); display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.cfooter-side a, .cfooter-side span { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.cfooter-side span { cursor: default; }
+.cfooter-side a:hover { opacity: 0.75; }
+.cfooter-side .cfooter-top { margin-bottom: 6px; text-decoration: none; color: rgba(244, 239, 230, 0.38); transition: color var(--dur-fast) var(--ease-out); }
+.cfooter-side .cfooter-top:hover { color: var(--ink); opacity: 1; }
+.cfooter-copy { position: absolute; z-index: 1; left: var(--gutter); bottom: 24px; font-size: 14px; color: rgba(244, 239, 230, 0.38); }
+.ctag-pos { position: absolute; left: 0; top: 0; pointer-events: none; will-change: transform; }
+.ctag-me { opacity: 0; transition: opacity var(--dur-fast) var(--ease-out); }
+.ctag { position: relative; display: block; width: 84px; height: 21px; border-radius: 12px; overflow: hidden; }
+.ctag svg { position: absolute; display: block; max-width: none; overflow: visible; }
+.ctag-glow { left: -13px; top: -24px; }
+.ctag-streak { left: 22.5px; top: -3px; mix-blend-mode: plus-lighter; }
+.ctag-shine { left: 13px; top: -4px; mix-blend-mode: plus-lighter; }
+.ctag-label { position: relative; display: block; width: 100%; font-size: 12px; line-height: 21px; letter-spacing: -0.02em; text-align: center; color: #fff; }
+@media (max-width: 809px) {
+  .cfooter { height: 340px; }
+  .cfooter-main { top: 56px; }
+  .cfooter-side { top: auto; bottom: 56px; right: auto; left: var(--gutter); flex-direction: row; flex-wrap: wrap; gap: 16px; }
+  .cfooter-side .cfooter-top { margin-bottom: 0; }
 }
 
 /* ================= Case study ================= */
