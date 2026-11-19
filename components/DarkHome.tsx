@@ -269,6 +269,28 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
     const total = INTRO_SCROLL + SCROLL_PER_CARD * (n - 1);
     scrollToY(st.start + ((INTRO_SCROLL + k * SCROLL_PER_CARD) / total) * (st.end - st.start));
   };
+  const goToRef = useRef(goTo);
+  goToRef.current = goTo;
+  // Left / right arrow keys step through the cards while the carousel is on screen.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      const st = trigger.current;
+      if (!st || window.scrollY > st.end + 4) return; // past the carousel: leave the keys alone
+      const total = INTRO_SCROLL + SCROLL_PER_CARD * Math.max(1, n - 1);
+      const introEnd = st.start + (INTRO_SCROLL / total) * (st.end - st.start);
+      const before = window.scrollY < introEnd - 4; // still on the intro: → brings the first card in
+      const k = before ? (e.key === "ArrowRight" ? 0 : -1) : activeRef.current + (e.key === "ArrowRight" ? 1 : -1);
+      if (k < 0 || k > n - 1) return;
+      e.preventDefault();
+      goToRef.current(k);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [n]);
   // A side card click brings it into focus; the centred card opens the case study.
   const onCardClick = (k: number) => (e: React.MouseEvent) => {
     if (k === active) return;

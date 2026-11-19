@@ -9,28 +9,28 @@ const MOVE_MIN = 1.6;     // seconds a tag takes to glide to its next spot (min)
 const MOVE_MAX = 3.4;     // (max)
 const PAUSE_MAX = 1.6;    // longest pause between moves (s)
 const KEEP_CLEAR = 18;    // px of space the drifting tags keep around the text in the middle and the links
-const YOU_OFFSET = { x: -2, y: -2 }; // puts the "You" arrow's tip right on your pointer (px)
+const YOU_OFFSET = { x: 0, y: 0 };   // puts the "You" arrow's tip right on your pointer (px)
 /* ------------------------------------------------------------------------ */
 
-// Name tags, styled like multiplayer cursors: an arrow plus a pill whose background is a crop of one of
-// the carousel cards' gradients (bg = card background image, pos = which part of it shows).
+// Name tags exactly as in Figma (node 67:5106): a small outlined arrow plus a pill. The pill backgrounds
+// are Figma's own renders of its "slice shift" shader (that effect needs experimental browser features,
+// so it's baked into images); the arrows are the design's SVGs.
 const TAGS = {
-  you: { label: "You", color: "#8FA8FF", bg: "/home/bg2.jpg", pos: "4% 47%", at: [1026, 132] },
+  you: { label: "You", id: "you", w: 54, at: [1026, 132] },
   others: [
-    { label: "Srija", color: "#8B7BF0", bg: "/home/bg4.jpg", pos: "28% 34%", at: [442, 82] },
-    { label: "Engineering", color: "#D88A45", bg: "/home/bg3.jpg", pos: "88% 94%", at: [346, 176] },
-    { label: "Product", color: "#93A882", bg: "/home/bg1.jpg", pos: "8% 86%", at: [803, 217] },
+    { label: "Srija", id: "srija", w: 54, at: [442, 82] },
+    { label: "Engineering", id: "engineering", w: 76.5, at: [346, 176] },
+    { label: "Product", id: "product", w: 65.5, at: [803, 217] },
   ],
 };
 const FRAME = { w: 1440, h: 265 }; // Figma frame size, for the starting spots
 
-function Tag({ label, color, bg, pos }: { label: string; color: string; bg: string; pos: string }) {
+function Tag({ label, id, w }: { label: string; id: string; w: number }) {
   return (
     <>
-      <svg className="ctag-arrow" width="16" height="20" viewBox="0 0 18 22" aria-hidden>
-        <path d="M1.5 1.5 L1.5 17.5 L6 13.3 L9.2 20.2 L12 19 L8.9 12.2 L15 12.2 Z" fill={color} stroke="#fff" strokeWidth="1.4" strokeLinejoin="round" />
-      </svg>
-      <span className="ctag" style={{ backgroundImage: `url(${bg})`, backgroundPosition: pos }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="ctag-arrow" src={`/footer/arrow-${id}.svg`} width={8.34} height={7.94} alt="" />
+      <span className="ctag" style={{ width: w, backgroundImage: `url(/footer/pill-${id}.png)` }}>
         <span className="ctag-label">{label}</span>
       </span>
     </>
@@ -84,7 +84,7 @@ export default function CollabFooter({ nav }: { nav: Item[] }) {
     });
     const blockers = (): Box[] => {
       const r = el.getBoundingClientRect();
-      return [".cfooter-main", ".cfooter-side", ".cfooter-copy"].flatMap((sel) => {
+      return [".cfooter-main", ".cfooter-side", ".cfooter-copy", ".cfooter-credit"].flatMap((sel) => {
         const n = el.querySelector(sel);
         if (!n) return [];
         const b = n.getBoundingClientRect();
@@ -106,8 +106,15 @@ export default function CollabFooter({ nav }: { nav: Item[] }) {
     };
     const pickSpot = (i: number, b: Bot) => {
       const boxes = blockers();
-      for (let tries = 0; tries < 40; tries++) {
+      // the other tags' destinations count as taken, so they don't pile on top of each other
+      const taken = state.filter((o) => o !== b).map((o) => {
+        const node = bots.current[state.indexOf(o)];
+        const ow = node?.offsetWidth ?? 100, oh = node?.offsetHeight ?? 26;
+        return { l: o.tx * w - 12, t: o.ty * h - 12, r: o.tx * w + ow + 12, b: o.ty * h + oh + 12 };
+      });
+      for (let tries = 0; tries < 60; tries++) {
         const tx = between(0.04, 0.8), ty = between(0.06, 0.82);
+        if (hits(i, tx * w, ty * h, taken)) continue;
         if (clearPath(i, b, tx, ty, boxes)) return [tx, ty];
       }
       return [b.x, b.y]; // nowhere clear right now: stay put and try again after the pause
@@ -138,6 +145,19 @@ export default function CollabFooter({ nav }: { nav: Item[] }) {
       raf = visible ? requestAnimationFrame(tick) : 0;
     };
 
+    // The header steps out of the way while the footer is on screen.
+    const html = document.documentElement;
+    // The footer sits underneath the page, so "in view" means uncovered: how far you are from the bottom.
+    let shown = false;
+    const setFooterIn = (on: boolean) => { if (on) html.dataset.footerIn = ""; else delete html.dataset.footerIn; };
+    const onScroll = () => {
+      const left = html.scrollHeight - (window.scrollY + window.innerHeight); // px of page still below the screen
+      const on = left < el.offsetHeight - 40; // at least 40px of the footer showing
+      if (on !== shown) { shown = on; setFooterIn(on); }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    onScroll();
     let io: IntersectionObserver | null = null;
     if (reduced) state.forEach((b, i) => place(i, b)); // reduced motion: tags stay put
     else {
@@ -152,6 +172,9 @@ export default function CollabFooter({ nav }: { nav: Item[] }) {
     return () => {
       ro.disconnect();
       io?.disconnect();
+      setFooterIn(false);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
       cancelAnimationFrame(raf);
       el.removeEventListener("pointermove", onMove);
       el.removeEventListener("pointerleave", onLeave);
@@ -161,12 +184,12 @@ export default function CollabFooter({ nav }: { nav: Item[] }) {
   return (
     <footer ref={root} id="contact" className={`cfooter${fine ? " is-live" : ""}`}>
       {TAGS.others.map((t, i) => (
-        <div key={t.label} className="ctag-pos" aria-hidden ref={(n) => { bots.current[i] = n; }}>
+        <div key={t.label} className="ctag-pos" style={{ width: t.w + 7 }} aria-hidden ref={(n) => { bots.current[i] = n; }}>
           <Tag {...t} />
         </div>
       ))}
       {fine && (
-        <div ref={me} className="ctag-pos ctag-me" aria-hidden>
+        <div ref={me} className="ctag-pos ctag-me" style={{ width: TAGS.you.w + 7 }} aria-hidden>
           <Tag {...TAGS.you} />
         </div>
       )}
@@ -184,6 +207,7 @@ export default function CollabFooter({ nav }: { nav: Item[] }) {
       </nav>
 
       <p className="cfooter-copy">&copy; {new Date().getFullYear()} Srija Sankavaram</p>
+      <p className="cfooter-credit">Designed by me. Developed with Claude Code.</p>
     </footer>
   );
 }
