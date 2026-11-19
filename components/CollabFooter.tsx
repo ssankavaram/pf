@@ -9,35 +9,31 @@ const MOVE_MIN = 1.6;     // seconds a tag takes to glide to its next spot (min)
 const MOVE_MAX = 3.4;     // (max)
 const PAUSE_MAX = 1.6;    // longest pause between moves (s)
 const FOLLOW_LAG = 0.05;  // how loosely "Engineering" trails your cursor (lower = lazier)
-const YOU_OFFSET = { x: 14, y: 16 }; // where your "You" tag sits relative to the pointer (px)
+const YOU_OFFSET = { x: -2, y: -2 }; // puts the "You" arrow's tip right on your pointer (px)
 /* ------------------------------------------------------------------------ */
 
-// Glowing name tags from the Figma footer (node 64:4880): a soft coloured glow, a dim streak
-// and a light streak under a white label. `streak` is the dim streak's colour.
+// Name tags, styled like multiplayer cursors: an arrow plus a pill whose background is a crop of one of
+// the carousel cards' gradients (bg = card background image, pos = which part of it shows).
 const TAGS = {
-  you: { label: "You", glow: "#5B8FF9", streak: "#5E3076", at: [1026, 132] },
+  you: { label: "You", color: "#8FA8FF", bg: "/home/bg2.jpg", pos: "4% 47%", at: [1026, 132] },
   others: [
-    { label: "Srija", glow: "#BA5BF9", streak: "#5E3076", at: [442, 82] },
-    { label: "Engineering", glow: "#5BE1F9", streak: "#5E3076", at: [346, 176] },
-    { label: "Product", glow: "#5BF9AD", streak: "#305C76", at: [803, 217] },
+    { label: "Srija", color: "#8B7BF0", bg: "/home/bg4.jpg", pos: "28% 34%", at: [442, 82] },
+    { label: "Engineering", color: "#D88A45", bg: "/home/bg3.jpg", pos: "88% 94%", at: [346, 176] },
+    { label: "Product", color: "#93A882", bg: "/home/bg1.jpg", pos: "8% 86%", at: [803, 217] },
   ],
 };
 const FRAME = { w: 1440, h: 265 }; // Figma frame size, for the starting spots
 
-function Tag({ label, glow, streak }: { label: string; glow: string; streak: string }) {
+function Tag({ label, color, bg, pos }: { label: string; color: string; bg: string; pos: string }) {
   return (
-    <span className="ctag">
-      <svg className="ctag-glow" width="141" height="93" viewBox="0 0 141 93" aria-hidden>
-        <ellipse cx="70.5" cy="46.5" rx="40.5" ry="16.5" fill={glow} opacity="0.47" style={{ filter: "blur(15px)" }} />
+    <>
+      <svg className="ctag-arrow" width="16" height="20" viewBox="0 0 18 22" aria-hidden>
+        <path d="M1.5 1.5 L1.5 17.5 L6 13.3 L9.2 20.2 L12 19 L8.9 12.2 L15 12.2 Z" fill={color} stroke="#fff" strokeWidth="1.4" strokeLinejoin="round" />
       </svg>
-      <svg className="ctag-streak" width="68" height="31" viewBox="0 0 68 31" aria-hidden>
-        <path d="M47 18C51.4263 17.1147 64 4 64 4L62.5 25.5L4 27V25.5C4 25.5 19.5 23.5 47 18Z" fill={streak} style={{ filter: "blur(2px)" }} />
-      </svg>
-      <svg className="ctag-shine" width="80" height="35" viewBox="0 0 80 35" aria-hidden>
-        <path d="M62 23C66.4263 22.1147 75 4 75 4L76 29.5L17.5 31L4 27.5C4 27.5 34.5 28.5 62 23Z" fill="#D9D9D9" style={{ filter: "blur(2px)" }} />
-      </svg>
-      <span className="ctag-label">{label}</span>
-    </span>
+      <span className="ctag" style={{ backgroundImage: `url(${bg})`, backgroundPosition: pos }}>
+        <span className="ctag-label">{label}</span>
+      </span>
+    </>
   );
 }
 
@@ -140,7 +136,7 @@ export default function CollabFooter({ nav }: { nav: Item[] }) {
   }, []);
 
   return (
-    <footer ref={root} id="contact" className="cfooter">
+    <footer ref={root} id="contact" className={`cfooter${fine ? " is-live" : ""}`}>
       {TAGS.others.map((t, i) => (
         <div key={t.label} className="ctag-pos" aria-hidden ref={(n) => { bots.current[i] = n; }}>
           <Tag {...t} />
