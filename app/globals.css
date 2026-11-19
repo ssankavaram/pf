@@ -554,8 +554,8 @@ html { background: var(--mist); }
 .cicon:hover { background: rgba(255, 255, 255, 0.14); transform: translateY(-2px); }
 .cicon img { width: 17px; height: 17px; }
 .cicon { position: relative; }
-.cicon-tip { position: absolute; top: calc(100% + 8px); left: 50%; translate: -50% -4px; padding: 4px 9px; border-radius: 6px; background: rgba(20, 20, 20, 0.92); border: 0.5px solid rgba(255, 255, 255, 0.14);
-  font-size: 12px; line-height: 1.4; color: var(--ink); white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity var(--dur-fast) var(--ease-out), translate var(--dur-fast) var(--ease-out); }
+.cicon-tip { position: absolute; top: calc(100% + 8px); left: 50%; translate: -50% -4px; 
+  font-size: 12px; line-height: 1.4; color: rgba(244, 239, 230, 0.7); white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity var(--dur-fast) var(--ease-out), translate var(--dur-fast) var(--ease-out); }
 .cicon:hover .cicon-tip, .cicon:focus-visible .cicon-tip { opacity: 1; translate: -50% 0; }
 
 /* Section: canvas carousel (cards drawn + bent by the lens), intro on top, real links over the cards */
