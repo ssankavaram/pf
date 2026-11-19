@@ -10,6 +10,8 @@ export type Section = {
   link?: { label: string; href: string };
 };
 
+export type HomeLayers = { bg: string; fg: string; at: number[] };
+
 export type Project = {
   slug: string;
   short?: string;
@@ -18,6 +20,7 @@ export type Project = {
   tags?: string[];      // pills under the project in the home gallery (falls back to meta)
   line?: string;        // one-liner after the name under the home card
   cardTags?: string[];  // tags under the home card (falls back to tags / meta)
+  homeLayers?: HomeLayers; // the card split in two: moving gradient background + foreground image (x, y, w, h on the 780×437 card)
   homeCover?: string;   // finished card image for the home carousel (else plain fractal glass)
   title: string;
   meta: string;

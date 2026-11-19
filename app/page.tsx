@@ -9,6 +9,7 @@ export default function Home() {
     short: p.short ?? p.title,
     line: p.line ?? p.title,
     cover: p.homeCover,
+    layers: p.homeLayers,
     tags: p.cardTags ?? p.tags?.slice(0, 3) ?? p.meta.split(" · ").slice(0, 3),
   }));
 

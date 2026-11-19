@@ -14,6 +14,7 @@ export type HomeItem = {
   short: string; // "Investing education"
   line: string;  // one-liner after the name
   cover?: string; // a finished card image (e.g. exported from Figma) instead of the plain glass
+  layers?: { bg: string; fg: string; at: number[] }; // the same card in two layers, so the gradient can move and the image can grow
   tags: string[];
 };
 
@@ -27,7 +28,11 @@ const SNAP_DUR = 0.6;       // glide time when a touch/scrollbar scroll settles 
 const WHEEL_PAUSE = 160;    // ms without wheel input that ends a swipe (so trackpad momentum can't skip cards)
 const SCROLL_PER_CARD = 0.8;  // screen-heights of scrolling to move one card
 const CARD_RATIO = 780 / 437; // design cards (Figma node 64:4687)
-const FRAME = 12;             // frame margin around the glass on the focused card (px at design size)
+const DRIFT_ZOOM = 0.06;      // the focused card's gradient zooms in this much so it has room to drift
+const DRIFT_BREATHE = 0.025;  // …and gently breathes in and out by this much
+const DRIFT_MOVE = 0.025;     // how far it drifts (× card size)
+const HOVER_GROW = 1.06;      // the image inside a card grows to this on hover
+const HOVER_EASE = 0.12;      // how quickly it grows/shrinks (per frame, 0–1)
 const CARD_TOP_GAP = 48;      // space between the intro and the card at the start (px; card bottom may be cut off)
 const CARD_Y_FOCUS = 0.42;    // card centre once the intro has cleared (room for the caption below)
 const FOCUS_GROW = 1.04;      // cards grow a little as they take focus…
@@ -44,36 +49,41 @@ const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
  * over a frame 141.5% × 140.6% of the glass, centred) fills the card; `frame` (0–1) eases in the
  * #373636 margin, stroke and smaller inner radius used for the focused card.
  */
-function drawCard(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number, frame: number, cover?: HTMLImageElement) {
+type Layers = { bg: HTMLImageElement; fg: HTMLImageElement; at: number[] };
+const ready = (i?: HTMLImageElement) => !!i && i.complete && i.naturalWidth > 0;
+
+/**
+ * One card, drawn edge to edge. With layers: the gradient background drifts slowly while the card is
+ * in focus (`focus` 0–1), and the foreground image grows on hover (`hover` 0–1). The dark background
+ * uses 'lighten' so it melts into the page and only the gradients show.
+ */
+function drawCard(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number,
+  cover: HTMLImageElement | undefined, layers: Layers | undefined, focus: number, hover: number, t: number) {
   const k = w / 780;
-  if (frame > 0.01) {
-    ctx.save();
-    ctx.globalAlpha = frame;
-    ctx.beginPath();
-    ctx.roundRect(x, y, w, h, 12);
-    ctx.fillStyle = "#373636";
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.18)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.restore();
-  }
-  const inset = FRAME * k * frame;
-  const ix = x + inset, iy = y + inset, iw = w - inset * 2, ih = h - inset * 2;
   ctx.save();
   ctx.beginPath();
-  ctx.roundRect(ix, iy, iw, ih, 12 - 4 * frame);
+  ctx.roundRect(x, y, w, h, 12);
   ctx.clip();
-  if (cover) {
-    // A finished card design from Figma (exported at 2×). 'lighten' lets its dark background
-    // (darker than the page) melt into the page, so only the gradients and UI show.
+  if (layers && ready(layers.bg) && ready(layers.fg)) {
+    // Gradient: a slow, gentle drift and breathe (two out-of-step waves so it never looks looped)
+    const s = 1 + (DRIFT_ZOOM + DRIFT_BREATHE * Math.sin(t * 0.5)) * focus;
+    const dx = Math.sin(t * 0.37) * DRIFT_MOVE * w * focus;
+    const dy = Math.cos(t * 0.29) * DRIFT_MOVE * h * focus;
     ctx.globalCompositeOperation = "lighten";
-    if (cover.complete && cover.naturalWidth) ctx.drawImage(cover, ix, iy, iw, ih);
+    ctx.drawImage(layers.bg, x + w / 2 - (w * s) / 2 + dx, y + h / 2 - (h * s) / 2 + dy, w * s, h * s);
+    ctx.globalCompositeOperation = "source-over";
+    // Foreground: grows from its own centre on hover
+    const [fx, fy, fw, fh] = layers.at;
+    const g = 1 + (HOVER_GROW - 1) * hover;
+    const cx = x + (fx + fw / 2) * k, cy = y + (fy + fh / 2) * k;
+    ctx.drawImage(layers.fg, cx - (fw * k * g) / 2, cy - (fh * k * g) / 2, fw * k * g, fh * k * g);
+  } else if (ready(cover)) {
+    ctx.globalCompositeOperation = "lighten";
+    ctx.drawImage(cover!, x, y, w, h);
   } else {
     ctx.fillStyle = GLASS_BG;
-    ctx.fillRect(ix, iy, iw, ih);
-    // Smooth glass gradient (no reeded strips, so no vertical lines)
-    if (img.complete && img.naturalWidth) ctx.drawImage(img, ix - iw * 0.2076, iy, iw * 1.4152, ih * 1.4063);
+    ctx.fillRect(x, y, w, h);
+    if (ready(img)) ctx.drawImage(img, x - w * 0.2076, y, w * 1.4152, h * 1.4063); // smooth glass
   }
   ctx.restore();
 }
@@ -91,6 +101,7 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const intro = useRef<HTMLDivElement>(null);
   const caps = useRef<(HTMLDivElement | null)[]>([]);
+  const hovered = useRef(-1); // card under the pointer
   const links = useRef<(HTMLAnchorElement | null)[]>([]);
   const trigger = useRef<ScrollTrigger | null>(null);
   const activeRef = useRef(0);
@@ -121,6 +132,14 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
         c.src = p.cover;
         return c;
       });
+      const layers: (Layers | undefined)[] = items.map((p) => {
+        if (!p.layers) return undefined;
+        const bg = new Image(), fg = new Image();
+        bg.src = p.layers.bg;
+        fg.src = p.layers.fg;
+        return { bg, fg, at: p.layers.at };
+      });
+      const hoverT = items.map(() => 0); // eased 0–1 per card
 
       let W = 0, H = 0, dpr = 1, cardW = 0, cardH = 0, introBottom = 300;
       const size = () => {
@@ -144,6 +163,7 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
       const travel = gsap.parseEase(EASE.inOut);
       const frame = () => {
         if (!W) return;
+        const now = performance.now() / 1000;
         const introT = travel(clamp(state.q, 0, 1));
         const p = Math.max(0, state.q - 1);
         const progress = n > 1 ? p / (n - 1) : 0;
@@ -180,7 +200,9 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
             link.style.height = `${chh}px`;
           }
           if (x > W + ox + 40 || x + cw < -ox - 40) return;
-          drawCard(drawCtx, img, x, y, cw, chh, 0, covers[j]); // no focus frame: the card fills edge to edge
+          const f = 1 - clamp(Math.abs(j - p) / 0.6, 0, 1);
+          hoverT[j] += ((hovered.current === j ? 1 : 0) - hoverT[j]) * HOVER_EASE;
+          drawCard(drawCtx, img, x, y, cw, chh, covers[j], layers[j], f, hoverT[j], now);
         });
         if (lens) lens.draw(target, focus, 1 - cardY, Math.max(LENS.flat, cw * 0.5 / W)); // flat middle, bends toward the screen edges // GL's y runs bottom-up
 
@@ -388,6 +410,8 @@ export default function DarkHome({ name, bio, currently, nav, items }: Props) {
           ref={(el) => { links.current[i] = el; }}
           onClick={onCardClick(i)}
           onFocus={() => { if (i !== activeRef.current) goTo(i); }}
+          onPointerEnter={() => { hovered.current = i; }}
+          onPointerLeave={() => { if (hovered.current === i) hovered.current = -1; }}
         />
       ))}
       {items.map((p, i) => (

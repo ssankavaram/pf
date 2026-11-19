@@ -2,6 +2,7 @@
   {
     "slug": "investing-education",
     "homeCover": "/home/card1.jpg",
+    "homeLayers": { "bg": "/home/bg1.jpg", "fg": "/home/fg1.png", "at": [178, 134, 411, 169] },
     "line": "Lifting engagement by 47% at a leading national bank",
     "cardTags": ["End-to-end", "Enterprise", "Prototyping in code"],
     "coverAspect": 0.48,
@@ -77,6 +78,7 @@
   {
     "slug": "usbank",
     "homeCover": "/home/card2.jpg",
+    "homeLayers": { "bg": "/home/bg2.jpg", "fg": "/home/fg2.png", "at": [225, 164, 329, 108] },
     "line": "A collection of my public facing work",
     "coverAspect": 1.375,
     "short": "U.S. Bank",
@@ -107,6 +109,7 @@
   {
     "slug": "application-hub",
     "homeCover": "/home/card3.jpg",
+    "homeLayers": { "bg": "/home/bg3.jpg", "fg": "/home/fg3.png", "at": [106, 87, 567, 350] },
     "line": "Cutting banker help-center calls by 18%",
     "coverAspect": 0.865,
     "short": "Application hub",
@@ -166,6 +169,7 @@
   {
     "slug": "projectmorph",
     "homeCover": "/home/card4.jpg",
+    "homeLayers": { "bg": "/home/bg4.jpg", "fg": "/home/fg4.png", "at": [114, 71, 565, 333] },
     "line": "One reliable hub for scattered government resources",
     "coverAspect": 1.256,
     "short": "Project Morph",
